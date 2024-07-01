@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\EstadoElectronicoCollection;
+use App\Http\Resources\EstadoElectronicoResource;
 use App\Models\EstadoElectronico;
 use Illuminate\Http\Request;
 
@@ -15,6 +17,9 @@ class EstadoElectronicoController extends Controller
     public function index()
     {
         //
+
+        $estadoElectronico = EstadoElectronico::all();
+        return new EstadoElectronicoCollection($estadoElectronico);
     }
 
     /**
