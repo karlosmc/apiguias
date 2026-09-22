@@ -19,7 +19,11 @@ class Adicionales extends Model
         'emisor'
     ];
 
-    public function despatch(){
-        return $this->belongsTo(Despatch::class);
-    }
+    // public function despatch(){
+    //     return $this->belongsTo(Despatch::class);
+    // }
+
+    // public function despatchadicionales(){
+    //     return $this->belongsTo(Despatch::class);
+    // }
 }

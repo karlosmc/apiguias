@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\TieneFavoritos;
 
 class Producto extends Model
 {
-    use HasFactory;
+    use HasFactory, TieneFavoritos;
     
 
     protected $fillable = [
@@ -15,9 +16,7 @@ class Producto extends Model
         'codProdSunat',
         'descripcion',
         'unidad',
-        'fav',
         'id_user',
-        'nombreCorto'
     ];
 
     public function user(){
@@ -29,6 +28,8 @@ class Producto extends Model
 
         return $this->belongsToMany(Despatch::class, 'despatch_productos', 'id_producto', 'id_despatch');
     }
+
+    
         
 }
 

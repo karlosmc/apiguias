@@ -4,24 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\TieneFavoritos;
 
 class Conductor extends Model
 {
-    use HasFactory;
+    use HasFactory, TieneFavoritos;
 
     protected $table = "conductores";
-    protected $primaryKey = 'id';
-    public $incrementing = true; // Asegúrate de que sea autoincremental si corresponde
-    protected $keyType = 'int'; // Asegúrate de que el tipo de clave primaria sea correcto
+    // protected $primaryKey = 'id';
+    // public $incrementing = true; // Asegúrate de que sea autoincremental si corresponde
+    // protected $keyType = 'int'; // Asegúrate de que el tipo de clave primaria sea correcto
 
     protected $fillable=[
         'nroDoc',
         'nombres',
         'apellidos',
         'licencia',
-        'nombreCorto',
         'isCompany',
-        'fav',
         'id_tipodocumento'
     ];
 

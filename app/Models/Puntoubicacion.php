@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\TieneFavoritos;
 
 class Puntoubicacion extends Model
 {
-    use HasFactory;
+    use HasFactory, TieneFavoritos;
     protected $table = 'puntoubicacion';
     protected $fillable = [
         'ubigeo',
@@ -15,12 +16,19 @@ class Puntoubicacion extends Model
         'codLocal',
         'ruc',
         'isCompany',
-        'fav',
-        'nombreCorto'
+        'rznSocial'
     ];
 
     public function ubigeoRelation(){
         
         return $this->belongsTo(Ubigeo::class,'ubigeo','ubigeo');
+    }
+
+    public function despatches(){
+        return $this->belongsToMany(Shipment::class, 'shipment_puntoubicacions', 'id_puntoubicacion', 'id_shipment');
+    }
+    public function almacenesFafio()
+    {
+        return $this->hasMany(AlmacenFafio::class, 'id_punto_ubicacion');
     }
 }

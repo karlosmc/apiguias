@@ -16,3 +16,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Documentación OpenAPI generada con: php artisan docs:openapi
+/openapi.json

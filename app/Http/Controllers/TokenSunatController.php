@@ -45,7 +45,7 @@ class TokenSunatController extends Controller
     {
         //
         
-        $parameters = SunatParameters::getSunatParams('PRO');
+        $parameters = SunatParameters::getSunatParams();
 
         if (!$parameters) {
             return response()->json(['error' => 'Sunat parameters no exiten'], 404);

@@ -24,9 +24,15 @@ class EstadoElectronicoResource extends JsonResource
             'estadoSunat'=> $this->estadoSunat,
             'codigoSunat'=> $this->codigoSunat,
             'descripcion'=> $this->descripcion,
+            'rutaXml'=> $this->rutaXml,
+            'rutaPdf'=> $this->rutaPdf,
+            'rutaCdr'=> $this->rutaCdr,
+            'hash'=> $this->hash,
             'hashQr'=> $this->hashQr,
             'token'=>$this->token,
             'ticket'=>$this->ticket,
+            'id_user'=>$this->despatch?$this->despatch->id_user:null,
+            'name'=>$this->usuario?$this->usuario->name:null,
         ];
     }
 }

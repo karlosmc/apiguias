@@ -22,7 +22,7 @@ class SunatParametersSeeder extends Seeder
             array(
                 "client_id" => "test-85e5b0ae-255c-4891-a595-0b98c65c9854",
                 "client_secret" => "test-Hty/M6QshYvPgItX2P0+Kw==",
-                "username" => "20119207640MODDATOS",
+                "username" => "20533097121MODDATOS",
                 "password" => "MODDATOS",
                 "scope" => "https://api-cpe.sunat.gob.pe",
                 "grant_type"=>'password',

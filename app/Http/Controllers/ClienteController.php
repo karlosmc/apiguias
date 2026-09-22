@@ -12,26 +12,30 @@ use Illuminate\Http\Request;
 class ClienteController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Listar clientes
      *
-     * @return \Illuminate\Http\Response
+     * Acepta filtros por número de documento o razón social.
+     *
+     * El campo `fav` de la respuesta es el favorito DEL USUARIO autenticado,
+     * no un valor compartido. Se filtra con `?fav=1` (solo favoritos) o
+     * `?fav=0` (el resto).
+     *
+     * `nombreCorto` también es el del usuario: el que él le puso o, si no
+     * puso ninguno, el del catálogo.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
         // return new PedidoCollection(Pedido::with('user')->with('productos')->where('estado',0)->get());
-        
+
         // $clientes = Cliente::all();
         // return new ClienteCollection(Cliente::with('tipoDocumentos')->get());
 
-        $clientes = Cliente::with('tipoDocumentos')->get();
+        // $clientes = Cliente::with('tipoDocumentos')->get();
 
-        return ClienteResouce::collection($clientes);
-    }
+        // return ClienteResouce::collection($clientes);
 
-    public function buscar(Request $request){
-
-        $query = Cliente::with("tipoDocumentos");
+          $query = Cliente::with("tipoDocumentos")->conPreferencias();
 
         if ($request->has('numDoc')) {
             $query->where('numDoc', $request->input('numDoc'));
@@ -42,7 +46,36 @@ class ClienteController extends Controller
         }
 
         if ($request->has('fav')) {
-            $query->where('fav', $request->input('fav'));
+            $query->filtrarFavorito($request->input('fav'));
+        }
+
+        return ClienteResouce::collection($query->get());
+    }
+
+    /**
+     * Buscar clientes
+     *
+     * Mismos filtros que el listado. El campo `fav` de la respuesta es el
+     * favorito DEL USUARIO autenticado, no un valor compartido. Se filtra con
+     * `?fav=1` (solo favoritos) o `?fav=0` (el resto).
+     *
+     * `nombreCorto` también es el del usuario: el que él le puso o, si no
+     * puso ninguno, el del catálogo.
+     */
+    public function buscar(Request $request){
+
+        $query = Cliente::with("tipoDocumentos")->conPreferencias();
+
+        if ($request->has('numDoc')) {
+            $query->where('numDoc', $request->input('numDoc'));
+        }
+
+        if ($request->has('rznSocial')) {
+            $query->where('rznSocial', 'like', '%' . $request->input('rznSocial') . '%');
+        }
+
+        if ($request->has('fav')) {
+            $query->filtrarFavorito($request->input('fav'));
         }
 
         return ClienteResouce::collection($query->get());
@@ -60,34 +93,34 @@ class ClienteController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Registrar cliente
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Si se envía `fav`, el registro queda marcado como favorito solo para
+     * el usuario que lo crea.
      */
     public function store(ClienteRequest $request)
     {
 
         $request->validated();
 
-      
-
         $persona = new Cliente();
 
         $persona->numDoc = $request->numDoc;
         $persona->rznSocial = $request->rznSocial;
-        $persona->fav = $request->fav;
         $persona->isCompany = $request->isCompany;
         $persona->email = $request->email;
         $persona->telephone = $request->telephone;
         $persona->nombreCorto = $request->nombreCorto;
 
         $persona->id_tipodocumento = TipoDocumento::where('tipoDoc',$request->tipoDoc)->value('id');
-        
+
         $persona->save();
 
+        // El favorito es del usuario que lo crea, no del catálogo completo
+        $persona->aplicarFavorito($request->fav);
+
         $id = $persona->id;
-        
+
 
         return [
             'message' => "Persona con id $id Insertado con exito",
@@ -96,10 +129,9 @@ class ClienteController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Ver cliente por id
      *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * No implementado: actualmente devuelve una respuesta vacía.
      */
     public function show($id)
     {
@@ -118,11 +150,11 @@ class ClienteController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar cliente
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * `fav` y `nombreCorto` se guardan solo para el usuario autenticado (su
+     * favorito y su nombre corto propio); el resto de campos son compartidos.
+     * El nombre corto del catálogo no cambia: se fija al crear el registro.
      */
     public function update(Request $request, Cliente $cliente)
     {
@@ -138,16 +170,19 @@ class ClienteController extends Controller
         $data["id_tipodocumento"] = TipoDocumento::where('tipoDoc',$request->tipoDoc)->value('id');
         $cliente->update($data);
         $cliente->refresh();
+        $cliente->aplicarFavorito($request->fav);
+        if ($request->has('nombreCorto')) {
+            $cliente->aplicarNombreCorto($request->input('nombreCorto'));
+        }
         return [
             'cliente' => $cliente
         ];
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Eliminar cliente
      *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * No implementado: actualmente devuelve una respuesta vacía.
      */
     public function destroy($id)
     {

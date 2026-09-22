@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\PuntoEmisionCollection;
 use App\Models\Empresa;
 use App\Models\PuntoEmision;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Database\Seeders\PuntoEmisionSeeder;
+use App\Http\Resources\PuntoEmisionResource;
+use App\Http\Resources\PuntoEmisionCollection;
+use App\Models\UsersPuntoemision;
+use Exception;
 
 class PuntoEmisionController extends Controller
 {
@@ -17,8 +22,8 @@ class PuntoEmisionController extends Controller
     public function index()
     {
         //
-        return new PuntoEmisionCollection(PuntoEmision::all());
-        
+        $puntoemision = PuntoEmision::with('users')->get();
+        return PuntoEmisionResource::collection($puntoemision);
     }
 
     /**
@@ -41,24 +46,45 @@ class PuntoEmisionController extends Controller
     {
         //
 
-        $puntoemision = new PuntoEmision();
+        DB::beginTransaction();
 
-        $ruc = Empresa::all()->first()->ruc;
+        try {
+            //code...
+            $puntoemision = new PuntoEmision();
 
-        $puntoemision->codigo=$request->codigo;
-        $puntoemision->nombre=$request->nombre;
-        $puntoemision->codLocal=$request->codLocal;
-        $puntoemision->direccion=$request->direccion;
-        $puntoemision->ruc=$ruc;
+            $ruc = Empresa::all()->first()->ruc;
 
-        $puntoemision->save();
+            $puntoemision->codigo = $request->codigo;
+            $puntoemision->nombre = $request->nombre;
+            $puntoemision->codLocal = $request->codLocal;
+            $puntoemision->direccion = $request->direccion;
+            $puntoemision->ruc = $ruc;
 
-        $id = $puntoemision->id;
+            $puntoemision->save();
 
-        return [
-            'message'=>"El punto de emisión con id $id Insertado correctamente",
-            'puntoemision'=>$puntoemision
-        ];
+            $id = $puntoemision->id;
+
+
+            // UsersPuntoemision::where('id_puntoemision', $request->id)->delete();
+
+            foreach ($request->users as $user) {
+                # code...
+                UsersPuntoemision::create([
+                    'id_users' => $user['id'],
+                    'id_puntoemision' => $id
+                ]);
+            }
+
+            DB::commit();
+            return [
+                'message' => "El punto de emisión con id $id Insertado correctamente",
+                'puntoemision' => $puntoemision
+            ];
+        } catch (Exception $e) {
+            //throw $th;
+            DB::rollBack();
+            return response()->json(['error' => 'Error al actualizar los datos', 'message' => $e->getMessage(), 'exito' => false], 500);
+        }
     }
     /**
      * Display the specified resource.
@@ -92,6 +118,34 @@ class PuntoEmisionController extends Controller
     public function update(Request $request, $id)
     {
         //
+
+        $puntoEmision = PuntoEmision::find($id);
+
+        $data = $request->all();
+        foreach ($data as $key => $value) {
+            if (is_null($value)) {
+                $data[$key] = '';
+            }
+        }
+
+        // $data["id_tipodocumento"] = TipoDocumento::where('tipoDoc',$request->tipoDoc)->value('id');
+
+        UsersPuntoemision::where('id_puntoemision', $puntoEmision->id)->delete();
+
+        foreach ($request->users as $user) {
+            # code...
+            UsersPuntoemision::create([
+                'id_users' => $user['id'],
+                'id_puntoemision' => $puntoEmision->id
+            ]);
+        }
+        $puntoEmision->update($data);
+        $puntoEmision->refresh();
+
+
+        return [
+            'puntoemision' => $puntoEmision
+        ];
     }
 
     /**

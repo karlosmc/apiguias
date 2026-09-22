@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('ubigeo',10);
             $table->string('direccion',500);
             $table->string('codLocal',10)->default('0000');
-            $table->string('ruc',20);
+            $table->string('ruc',20)->nullable();
             $table->string('tipo',1)->default('P');
             $table->timestamps();
         });

@@ -9,11 +9,12 @@ class EstadoElectronico extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'id'; 
-    
+    protected $primaryKey = 'id';
+
     protected $table = 'estado_electronico';
 
     protected $fillable = [
+        'id',
         'id_despatch',
         'serie',
         'numero',
@@ -32,8 +33,14 @@ class EstadoElectronico extends Model
         'codigoSunat'
     ];
 
-    public function despatch(){
+    public function despatch()
+    {
 
-        return $this->hasOne(Despatch::class,'id_despatch');
+        return $this->belongsTo(Despatch::class, 'id_despatch');
+    }
+
+    public function usuario()
+    {
+        return $this->despatch ? $this->despatch->usuario() : null;
     }
 }

@@ -20,15 +20,15 @@ return new class extends Migration
             $table->string('numero',20);
             $table->date('fecha');
             $table->string('estado',2)->default('V');
-            $table->string('estadoSunat',10);
+            $table->string('estadoSunat',10)->nullable();
             $table->text('descripcion');
             $table->string('rutaXml');
             $table->string('rutaPdf');
             $table->string('rutaCdr');
-            $table->text('cdrbase64');
+            $table->text('cdrbase64')->nullable();
             $table->string('hash',200)->nullable();
             $table->text('hashQr',500)->nullable();
-            $table->text('token');
+            $table->text('token')->nullable();
             $table->string('ticket')->nullable();
             $table->timestamps();
         });

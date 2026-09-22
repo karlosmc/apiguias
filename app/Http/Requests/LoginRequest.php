@@ -30,4 +30,13 @@ class LoginRequest extends FormRequest
             //
         ];
     }
+    public function messages()
+    {
+        return [
+            'documento.required'=>'El documento es obligatorio',
+            'documento.exists'=>'El documento no está registrado',
+            'password.required'=>'El password es obligatorio',
+            'id_empresa.required'=>'La empresa es obligatoria'
+        ];
+    }
 }

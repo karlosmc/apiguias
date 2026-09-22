@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('descripcion',400);
             $table->string('unidad',50);
             $table->boolean('fav')->default(false);
-            $table->foreignId('id_user')->references('id')->on('users')->onDelete('cascade');
+            $table->foreignId('id_user')->nullable()->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

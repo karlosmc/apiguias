@@ -26,6 +26,10 @@ class ConductorResource extends JsonResource
             'isCompany'=> $this->isCompany,
             'tipodocumento'=> $this->id_tipodocumento? $this->tipoDocumentos->valor:null,
             'tipoDoc'=> $this->id_tipodocumento? $this->tipoDocumentos->tipoDoc:null,
+            'tipo'=>$this->whenPivotLoaded('shipment_conductor',function(){
+                return $this->pivot->tipo;
+            })
+            
         ];
     }
 }

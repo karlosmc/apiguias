@@ -27,8 +27,8 @@ return new class extends Migration
             $table->foreignId('id_aeropuerto')->nullable()->references('id')->on('puerto')->onDelete('cascade');
             $table->foreignId('id_mottraslado')->references('id')->on('motivo_traslado')->onDelete('cascade');
             $table->foreignId('id_modtraslado')->references('id')->on('modalidad_traslado')->onDelete('cascade');
-            $table->foreignId('id_partida')->references('id')->on('puntoubicacion')->onDelete('cascade');
-            $table->foreignId('id_llegada')->references('id')->on('puntoubicacion')->onDelete('cascade');
+            // $table->foreignId('id_partida')->references('id')->on('puntoubicacion')->onDelete('cascade');
+            // $table->foreignId('id_llegada')->references('id')->on('puntoubicacion')->onDelete('cascade');
             $table->timestamps();
         });
     }

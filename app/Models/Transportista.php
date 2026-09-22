@@ -4,18 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\TieneFavoritos;
 
 class Transportista extends Model
 {
-    use HasFactory;
+    use HasFactory, TieneFavoritos;
 
     protected $table='transportistas';
 
     protected $fillable = [
         'numDoc',
         'rznSocial',
-        'fav',
-        'nombreCorto',
         'id_tipodocumento',
         'nroMtc'
     ];

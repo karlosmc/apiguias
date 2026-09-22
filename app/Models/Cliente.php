@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\TieneFavoritos;
 
 class Cliente extends Model
 {
-    use HasFactory;
+    use HasFactory, TieneFavoritos;
 
     protected $table = "clientes";
     
@@ -16,10 +17,8 @@ class Cliente extends Model
         'rznSocial',
         'email',
         'telephone',
-        'fav',
         'isCompany',
         'id_tipodocumento',
-        'nombreCorto'
     ];
 
     public function tipoDocumentos(){

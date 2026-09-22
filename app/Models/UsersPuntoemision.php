@@ -11,4 +11,9 @@ class UsersPuntoemision extends Model
 
     protected $table ='users_puntoemision';
 
+    protected $fillable = [
+        'id_users',
+        'id_puntoemision'
+    ];
+
 }

@@ -22,4 +22,9 @@ class PuntoEmision extends Model
     public function users(){
         return $this->belongsToMany(User::class,'users_puntoemision','id_puntoemision','id_users');
     }
+
+    public function numeraciones()
+    {
+        return $this->hasMany(Numeracion::class, 'id_puntoemision');
+    }
 }

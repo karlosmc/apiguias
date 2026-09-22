@@ -33,22 +33,21 @@ class FactilizaCommonServices
             $data = json_decode($response->getBody(), true);
 
             // $data= $this->cleanData($data['data']);
-
-            
-
+           
             // Aquí puedes estructurar la respuesta según tus necesidades
             return [
                 'status' => $data['status'],
                 'message'=> $data['message'],
                 'persona' =>[
                     "numero"=> $data['data']['numero'],
-                    "nombreRazonSocial"=>$type==='ruc'?trim($data['data']['nombre_o_razon_social']):trim($data['data']['nombre_completo']),
+                    "nombreRazonSocial"=>$type==='ruc'?trim($data['data']['nombre_o_razon_social']):trim(str_replace(",","",$data['data']['nombre_completo'])),
                     "nombres"=>$type==='dni'?trim($data['data']['nombres']):'',
                     "apellidos"=>$type==='dni'?trim($data['data']['apellido_paterno']). " ".trim($data['data']['apellido_materno']):'',
+                    "ape_pat"=>$type==='dni'?trim($data['data']['apellido_paterno']):'',
+                    "ape_mat"=>$type==='dni'?trim($data['data']['apellido_materno']):'',
                     "direccionCompleta"=>trim($data['data']['direccion_completa']),
                     "ubigeo"=>$data['data']['ubigeo_sunat'],
                 ]
-
             ];
         } catch (ClientException $e) {
             // Manejo de errores 4xx específicos

@@ -13,7 +13,7 @@ class VehiculoRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return true;
     }
 
     /**
@@ -25,6 +25,10 @@ class VehiculoRequest extends FormRequest
     {
         return [
             'placa' => ['required', 'unique:vehiculos'],
+            // Sin regla `boolean` a propósito: el front puede mandar "true"/"false"
+            // como texto. El controlador los normaliza con filter_var.
+            'tracto' => ['sometimes', 'nullable'],
+            'glp' => ['sometimes', 'nullable'],
 
             //
         ];

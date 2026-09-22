@@ -10,20 +10,24 @@ use Illuminate\Support\Facades\Auth;
 class ProductoController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Listar productos
      *
-     * @return \Illuminate\Http\Response
+     * Acepta filtros por código, descripción o nombre corto.
+     *
+     * El campo `fav` de la respuesta es el favorito DEL USUARIO autenticado,
+     * no un valor compartido. Se filtra con `?fav=1` (solo favoritos) o
+     * `?fav=0` (el resto).
+     *
+     * `nombreCorto` también es el del usuario: el que él le puso o, si no
+     * puso ninguno, el del catálogo.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
 
-        return new ProductoCollection(Producto::all());
-    }
+        // return new ProductoCollection(Producto::all());
 
-    public function buscar(Request $request)
-    {
-        $query = Producto::query();
+        $query = Producto::query()->conPreferencias();
 
         if ($request->has('codigo')) {
             $query->where('codigo', $request->input('codigo'));
@@ -32,8 +36,46 @@ class ProductoController extends Controller
         if ($request->has('descripcion')) {
             $query->where('descripcion', 'like', '%' . $request->input('descripcion') . '%');
         }
+
+        if ($request->has('nombreCorto')) {
+            $query->filtrarNombreCorto($request->input('nombreCorto'));
+        }
+
         if ($request->has('fav')) {
-            $query->where('fav', $request->input('fav'));
+            $query->filtrarFavorito($request->input('fav'));
+        }
+
+        return new ProductoCollection($query->get());
+    }
+
+    /**
+     * Buscar productos
+     *
+     * Mismos filtros que el listado. El campo `fav` de la respuesta es el
+     * favorito DEL USUARIO autenticado, no un valor compartido. Se filtra con
+     * `?fav=1` (solo favoritos) o `?fav=0` (el resto).
+     *
+     * `nombreCorto` también es el del usuario: el que él le puso o, si no
+     * puso ninguno, el del catálogo.
+     */
+    public function buscar(Request $request)
+    {
+        $query = Producto::query()->conPreferencias();
+
+        if ($request->has('codigo')) {
+            $query->where('codigo', $request->input('codigo'));
+        }
+
+        if ($request->has('descripcion')) {
+            $query->where('descripcion', 'like', '%' . $request->input('descripcion') . '%');
+        }
+
+        if ($request->has('nombreCorto')) {
+            $query->filtrarNombreCorto($request->input('nombreCorto'));
+        }
+
+        if ($request->has('fav')) {
+            $query->filtrarFavorito($request->input('fav'));
         }
 
         return new ProductoCollection($query->get());
@@ -50,14 +92,18 @@ class ProductoController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Registrar producto
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Si se envía `fav`, el registro queda marcado como favorito solo para
+     * el usuario que lo crea.
      */
     public function store(Request $request)
     {
         //
+
+        try {
+            //code...
+
 
         $producto = new Producto;
 
@@ -66,9 +112,11 @@ class ProductoController extends Controller
         $producto->codProdSunat = $request->codProdSunat;
         $producto->descripcion = $request->descripcion;
         $producto->unidad = $request->unidad;
-        $producto->fav = $request->fav;
         $producto->nombreCorto = $request->nombreCorto;
         $producto->save();
+
+        // El favorito es del usuario que lo crea, no del catálogo completo
+        $producto->aplicarFavorito($request->fav);
 
         $id = $producto->id;
 
@@ -76,13 +124,20 @@ class ProductoController extends Controller
             'message' => "Producto con id $id Insertado con exito",
             'producto' => $producto
         ];
+
+        } catch (\Exception $e) {
+            //throw $th;
+            return response()->json([
+                'message' => 'Error al insertar el producto',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Display the specified resource.
+     * Ver producto por id
      *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * No implementado: actualmente devuelve una respuesta vacía.
      */
     public function show($id)
     {
@@ -101,16 +156,15 @@ class ProductoController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar producto
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * `fav` y `nombreCorto` se guardan solo para el usuario autenticado (su
+     * favorito y su nombre corto propio); el resto de campos son compartidos.
+     * El nombre corto del catálogo no cambia: se fija al crear el registro.
      */
     public function update(Request $request, Producto $producto)
     {
         //
-
         $data = $request->all();
         foreach ($data as $key => $value) {
             if (is_null($value)) {
@@ -119,16 +173,20 @@ class ProductoController extends Controller
         }
 
         $producto->update($data);
+        $producto->aplicarFavorito($request->fav);
+        if ($request->has('nombreCorto')) {
+            $producto->aplicarNombreCorto($request->input('nombreCorto'));
+        }
+
         return [
             'producto' => $data
         ];
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Eliminar producto
      *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * No implementado: actualmente devuelve una respuesta vacía.
      */
     public function destroy($id)
     {

@@ -20,4 +20,9 @@ class DespatchProducto extends Model
         'unidad',
         'cantidad',
     ];
+
+    public function despatch(){
+
+        return $this->belongsTo(Despatch::class,'id_despatch');
+    }
 }

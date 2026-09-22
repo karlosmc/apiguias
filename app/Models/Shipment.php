@@ -24,7 +24,8 @@ class Shipment extends Model
         'id_aeropuerto',
         'id_mottraslado',
         'id_modtraslado',
-        'id_despatch'
+        'id_despatch',
+        'fecInicioTrasladoBienes',
     ];
 
     public function puerto(){
@@ -42,13 +43,13 @@ class Shipment extends Model
         return $this->belongsTo(ModalidadTraslado::class,'id_modtraslado');
     }
 
-    public function partida(){
-        return $this->belongsTo(Puntoubicacion::class,'id_partida');
-    }
+    // public function partida(){
+    //     return $this->belongsTo(Puntoubicacion::class,'id_partida');
+    // }
 
-    public function llegada(){
-        return $this->belongsTo(Puntoubicacion::class,'id_llegada');
-    }
+    // public function llegada(){
+    //     return $this->belongsTo(Puntoubicacion::class,'id_llegada');
+    // }
 
     public function transportista(){
         return $this->belongsTo(Transportista::class,'id_transportista');
@@ -59,13 +60,24 @@ class Shipment extends Model
     }
 
     public function vehiculos(){
-        return $this->belongsToMany(Vehiculo::class,'shipment_vehiculo','id_shipment','id_vehiculo');
+        return $this->belongsToMany(Vehiculo::class,'shipment_vehiculo','id_shipment','id_vehiculo')->withPivot('tipo');
     }
 
     public function conductores(){
-        return $this->belongsToMany(Conductor::class,'shipment_conductor','id_shipment','id_conductor');
+        return $this->belongsToMany(Conductor::class,'shipment_conductor','id_shipment','id_conductor')->withPivot('tipo');
     }
     public function despatch(){
         return $this->hasOne(Despatch::class,'id_despatch');
     }
+    // public function ubicaciones(){
+    //     return $this->belongsToMany(Puntoubicacion::class,'shipment_puntoubicacions','id_shipment','id_puntoubicacion');
+    // }
+
+    public function ubicaciones(){
+        return $this->hasMany(ShipmentPuntoubicacion::class,'id_shipment');
+    }
+
+    
 }
+
+

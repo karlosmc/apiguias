@@ -23,6 +23,7 @@ class PuntoubicacionResouce extends JsonResource
             'isCompany'=> $this->isCompany,
             'fav'=> $this->fav,
             'nombreCorto'=> $this->nombreCorto,
+            'rznSocial'=> $this->rznSocial,
             'fullubigeo'=> $this->ubigeo? $this->ubigeoRelation->fullubigeo:null,
         ];
     }

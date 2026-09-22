@@ -14,6 +14,25 @@ class SunatParameterResource extends JsonResource
      */
     public function toArray($request)
     {
-        return parent::toArray($request);
+        return [
+            'id'=> $this->id,
+            'client_id'=> $this->client_id,
+            'client_secret'=> $this->client_secret,
+            'username'=>$this->username,
+            'password'=>$this->password,
+            'scope'=>$this->scope,
+            'grant_type'=>$this->grant_type,
+            'env'=> $this->env,
+            'endpointurl'=> $this->endpointurl,
+            'certificado'=> $this->certificado,
+            'clavecertificado'=> $this->clavecertificado,
+            'urlsend'=> $this->urlsend,
+            'urlconsult'=> $this->urlconsult,
+            'id_empresa'=>$this->id_empresa,
+            'ruc'=>$this->id_empresa?$this->empresa->ruc:null,
+            'folder'=>$this->id_empresa?$this->empresa->folder:null,
+            'activo'=>$this->activo,
+            'nombre'=>$this->nombre,
+        ];
     }
 }

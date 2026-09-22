@@ -20,6 +20,7 @@ class Despatch extends Model
         'id_cliente',
         'id_tercero',
         'id_comprador',
+        'id_user'
     ];
 
     public function clientes(){
@@ -39,12 +40,23 @@ class Despatch extends Model
         return $this->hasOne(EstadoElectronico::class,'id_despatch');
     }
     
+    public function usuario(){
+        return $this->belongsTo(User::class, 'id_user');
+    }
     
     public function productos(){
-        return $this->belongsToMany(Producto::class,'despatch_producto','id_despatch','id_producto');
+        return $this->belongsToMany(Producto::class,'despatch_productos','id_despatch','id_producto');
     }
 
     public function docsadicionales(){
-        return $this->hasMany(Adicionales::class);
+        return $this->hasMany(Adicionales::class,'id_despatch');
+    }
+    
+    public function scops(){
+        return $this->hasMany(Scop::class,'id_despatch');
+    }
+
+    public function details(){
+        return $this->hasMany(DespatchProducto::class,'id_despatch');
     }
 }

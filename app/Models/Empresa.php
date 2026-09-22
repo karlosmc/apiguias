@@ -15,5 +15,14 @@ class Empresa extends Model
         'razonSocial',
         'email',
         'ruc',
+        'logo',
+        'folder'
+
     ];
+
+
+    public function parametros(){
+
+        return $this->hasMany(SunatParameters::class,'id_empresa');
+    }
 }

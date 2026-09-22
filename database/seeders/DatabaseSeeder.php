@@ -22,9 +22,25 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         // $this->call(MotivoTrasladoSeeder::class);
-        //$this->call(ModalidadTrasladoSeeder::class);
+        // $this->call(ModalidadTrasladoSeeder::class);
         // $this->call(IndicadoresSeeder::class);
         // $this->call(UbigeoSeeder::class);
-        $this->call(SunatParametersSeeder::class);
+        // $this->call(SunatParametersSeeder::class);
+
+        // $this->call(TipoDocumentosSeeder::class);
+        // $this->call(InitialValuesSeeder::class);
+
+        // $this->call(VehiculoSeeder::class);
+
+
+        // $this->call(ConductorSeeder::class);
+
+        // $this->call(PuntoEmisionSeeder::class);
+        // $this->call(NumeracionSeeder::class);
+        // $this->call(NumeracionVehiculosSeeder::class);
+
+        // $this->call(UserPuntoEmisionSeeder::class);
+
+        $this->call(ProductoSeeder::class);
     }
 }

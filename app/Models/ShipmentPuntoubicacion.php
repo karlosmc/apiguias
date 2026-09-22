@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Models\AlmacenFafio;
+
 class ShipmentPuntoubicacion extends Model
 {
     use HasFactory;
@@ -20,4 +22,9 @@ class ShipmentPuntoubicacion extends Model
         'ruc',
         'tipo'
     ];
+
+    public function almacenesFafio()
+    {
+        return $this->hasMany(AlmacenFafio::class, 'id_punto_ubicacion', 'id_puntoubicacion');
+    }
 }

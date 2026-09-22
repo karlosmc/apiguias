@@ -31,4 +31,18 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // API externo de SCOP (ConsultaScopApiController / ScopApiService)
+    'scop' => [
+        'url' => env('API_SCOP'),
+        'key' => env('API_KEY_SCOP'),
+        // segundos para conectar y para esperar la respuesta completa
+        'connect_timeout' => env('API_SCOP_CONNECT_TIMEOUT', 5),
+        'timeout' => env('API_SCOP_TIMEOUT', 60),
+        // minutos en caché: rango que incluye hoy / rango ya cerrado
+        'cache_minutos' => env('API_SCOP_CACHE_MINUTOS', 5),
+        'cache_minutos_historico' => env('API_SCOP_CACHE_MINUTOS_HISTORICO', 720),
+        // consultas que tarden al menos esto (segundos) quedan en el log
+        'log_lento' => env('API_SCOP_LOG_LENTO', 5),
+    ],
+
 ];

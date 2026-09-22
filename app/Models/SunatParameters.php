@@ -25,15 +25,37 @@ class SunatParameters extends Model
         "clavecertificado",
         "urlconsult",
         "id_empresa",
+        "nombre",
+        "activo"
     ];
 
-    public static function getSunatParams($enviroment){
+    public static function getSunatParams(){
         
         $id_empresa = Empresa::all()->first()->id;
+
         
-        $row = self::where('id_empresa',$id_empresa)
-                    ->where('env',$enviroment)->first();
+        $sunatParameter = SunatParameters::where('activo', 1)
+        ->where('id_empresa', $id_empresa)
+        ->with('empresa')
+        ->first();
         
-        return $row;
+        return $sunatParameter;
+    }
+
+    // public static function getSunaActiveParams(){
+        
+    //     $id_empresa = Empresa::all()->first()->id;
+
+        
+    //     $sunatParameter = SunatParameters::where('activo', 1)
+    //     ->where('id_empresa', $id_empresa)
+    //     ->with('empresa')
+    //     ->first();
+        
+    //     return $sunatParameter;
+    // }
+
+    public function empresa(){
+        return $this->belongsTo(Empresa::class,'id_empresa');
     }
 }

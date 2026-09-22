@@ -14,9 +14,8 @@ return new class extends Migration
     public function up()
     {
         Schema::table('despatches', function (Blueprint $table) {
-            $table->unsignedBigInteger('id_shipment');
-            $table->foreign('id_shipment')->references('id')->on('shipments')->onDelete('cascade');
             //
+            $table->foreignId('id_user')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
@@ -29,12 +28,8 @@ return new class extends Migration
     {
         Schema::table('despatches', function (Blueprint $table) {
             //
-            // $table->dropForeign('despatches_id_shipment_foreign');
-            // $table->dropColumn('id_shipment');
-            $table->dropForeign(['id_shipment']); // Eliminar la clave foránea
-            $table->dropColumn('id_shipment'); // Eliminar la columna id_shipment
 
-
+            $table->dropColumn('id_user');
         });
     }
 };

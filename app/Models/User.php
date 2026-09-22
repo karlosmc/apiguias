@@ -46,6 +46,10 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    public function favoritos(){
+        return $this->hasMany(Favorito::class, "id_user");
+    }
+
     public function puntoemision(){
         return $this->belongsToMany(PuntoEmision::class,'users_puntoemision','id_users','id_puntoemision');
     }

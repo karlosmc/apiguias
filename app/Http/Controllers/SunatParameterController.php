@@ -25,7 +25,7 @@ class SunatParameterController extends Controller
     public function parametros()
     {
 
-        $sunat = SunatParameters::getSunatParams('PRO');
+        $sunat = SunatParameters::getSunatParams();
         //
         return new SunatParameterResource($sunat);
     }
@@ -63,6 +63,8 @@ class SunatParameterController extends Controller
         $sunat->env = $request->env;
         $sunat->urlsend = $request->urlsend;
         $sunat->urlconsult = $request->urlconsult;
+        $sunat->activo = $request->activo==="0"?false:true;
+        $sunat->nombre = $request->nombre;
 
         $id_empresa = Empresa::all()->first()->id;
         $sunat->id_empresa = $id_empresa;
@@ -140,32 +142,36 @@ class SunatParameterController extends Controller
         $data = $request->all();
 
         $convert = new CertificateController();
-
-
-        if ($request->file('file')->isValid()) {
-
-            $fields = [
-                'file' => $request->file,
-                'clavecertificado' => $request->clavecertificado
-            ];
-            $newRequest = new Request($fields);
-
-            $response = $convert->converCert($newRequest);
-            if (!$response['exito']) {
-                return [
-                    'sunat' => $data,
-                    'error'=> $response['error']
+        if ($request->file('file')){
+            if ($request->file('file')->isValid()) {
+    
+                $fields = [
+                    'file' => $request->file,
+                    'clavecertificado' => $request->clavecertificado
                 ];
-            }else{
-                $data['certificado']=$response['base64'];
+                $newRequest = new Request($fields);
+    
+                $response = $convert->converCert($newRequest);
+                if (!$response['exito']) {
+                    return [
+                        'sunat' => $data,
+                        'error'=> $response['error']
+                    ];
+                }else{
+                    $data['certificado']=$response['base64'];
+                }
             }
+
         }
 
+        $sunat->activo = $request->activo==="0"?false:true;
+            
         $sunat->update($data);
         $sunat->refresh();
         return [
             'sunat' => $sunat
         ];
+
         
 
 
