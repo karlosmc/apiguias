@@ -1,0 +1,28 @@
+{
+    "tipoDocumento": "40",
+    "serie": "P001",
+    "correlativo": 1,
+    "fechaEmision": "2026-10-07",
+    "regimen": "01",
+    "cliente": {
+        "tipoDocumento": "6",
+        "numeroDocumento": "20000000001",
+        "razonSocial": "CLIENTE EJEMPLO S.A."
+    },
+    "documentos": [
+        {
+            "tipoDocumento": "01",
+            "idDocumento": "F001-20",
+            "fechaEmision": "2026-10-01",
+            "total": 500,
+            "montoPago": 500,
+            "fechaPago": "2026-10-07",
+            "monto": 10,
+            "neto": 510
+        }
+    ],
+    "totales": {
+        "total": 10,
+        "totalNeto": 510
+    }
+}

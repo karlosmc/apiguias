@@ -1,0 +1,35 @@
+{
+    "tipoDocumento": "07",
+    "serie": "FC01",
+    "correlativo": 1,
+    "fechaEmision": "2026-10-08",
+    "documentoAfectado": {
+        "tipoDocumento": "01",
+        "idDocumento": "F001-125"
+    },
+    "motivo": {
+        "codigo": "07",
+        "descripcion": "Devolución por ítem"
+    },
+    "cliente": {
+        "tipoDocumento": "6",
+        "numeroDocumento": "20000000001",
+        "razonSocial": "CLIENTE EJEMPLO S.A."
+    },
+    "items": [
+        {
+            "codigo": "P001",
+            "descripcion": "Producto gravado",
+            "cantidad": 1,
+            "valorUnitario": 50,
+            "precioUnitario": 59,
+            "valorVenta": 50,
+            "igv": 9
+        }
+    ],
+    "totales": {
+        "gravadas": 50,
+        "totalIgv": 9,
+        "totalVenta": 59
+    }
+}

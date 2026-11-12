@@ -1,0 +1,67 @@
+{
+    "tipoDocumento": "01",
+    "serie": "F001",
+    "correlativo": 125,
+    "fechaEmision": "2026-10-07",
+    "moneda": "PEN",
+    "formaPago": "Credito",
+    "cuotas": [
+        {
+            "monto": 100.0,
+            "fechaPago": "2026-11-07"
+        },
+        {
+            "monto": 48.62,
+            "fechaPago": "2026-12-07"
+        }
+    ],
+    "ordenCompra": "OC-0091",
+    "observacion": "Entrega en almacén central",
+    "cliente": {
+        "tipoDocumento": "6",
+        "numeroDocumento": "20000000001",
+        "razonSocial": "CLIENTE EJEMPLO S.A.",
+        "direccion": "JR. UNIÓN 456, LIMA"
+    },
+    "items": [
+        {
+            "codigo": "P001",
+            "descripcion": "Producto gravado",
+            "unidadMedida": "NIU",
+            "cantidad": 2,
+            "valorUnitario": 50,
+            "precioUnitario": 59,
+            "valorVenta": 100,
+            "igv": 18
+        },
+        {
+            "codigo": "P002",
+            "descripcion": "Bolsa plástica",
+            "cantidad": 1,
+            "valorUnitario": 0.1,
+            "precioUnitario": 0.118,
+            "valorVenta": 0.1,
+            "igv": 0.02,
+            "icbper": {
+                "monto": 0.5
+            }
+        },
+        {
+            "codigo": "P003",
+            "descripcion": "Libro",
+            "cantidad": 1,
+            "tipoAfectacionIgv": "20",
+            "valorUnitario": 30,
+            "precioUnitario": 30,
+            "valorVenta": 30,
+            "igv": 0
+        }
+    ],
+    "totales": {
+        "gravadas": 100.1,
+        "exoneradas": 30.0,
+        "totalIgv": 18.02,
+        "totalIcbper": 0.5,
+        "totalVenta": 148.62
+    }
+}

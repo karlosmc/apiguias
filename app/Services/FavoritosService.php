@@ -23,6 +23,10 @@ class FavoritosService
      */
     public function deUsuario(int $idUser)
     {
+        if (! static::porUsuario()) {
+            return $this->compartidos();
+        }
+
         $filas = Favorito::where('id_user', $idUser)
             ->where('fav', true)
             ->get()
@@ -79,6 +83,10 @@ class FavoritosService
      */
     public function clonar(int $origen, int $destino, array $seleccion)
     {
+        if (! static::porUsuario()) {
+            return $this->clonarCompartidos($seleccion);
+        }
+
         return DB::transaction(function () use ($origen, $destino, $seleccion) {
             $ahora = now();
             $detalle = [];
@@ -147,6 +155,70 @@ class FavoritosService
 
             return $detalle;
         });
+    }
+
+    /**
+     * ¿Favoritos por usuario (tabla favoritos) o compartidos en el catálogo?
+     * Ver config/favoritos.php.
+     */
+    public static function porUsuario()
+    {
+        return (bool) config('favoritos.por_usuario', false);
+    }
+
+    /**
+     * Modo compartido: los favoritos son los marcados en la columna `fav` de
+     * cada catálogo, iguales para todos los usuarios.
+     *
+     * @return array<string, array<int, array{id: int, nombreCorto: string|null, descripcion: string}>>
+     */
+    public function compartidos()
+    {
+        $resultado = [];
+
+        foreach (AppServiceProvider::TIPOS_FAVORITOS as $tipo => $clase) {
+            $resultado[$tipo] = $clase::where('fav', true)
+                ->get()
+                ->map(fn ($modelo) => [
+                    'id' => $modelo->id,
+                    'nombreCorto' => $modelo->nombreCortoGlobal(),
+                    'descripcion' => $this->descripcion($tipo, $modelo),
+                ])
+                ->sortBy('nombreCorto', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values()
+                ->all();
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Modo compartido: no hay nada que copiar, el destino ya ve los mismos
+     * favoritos que el origen. Se devuelve el mismo formato de detalle para
+     * que el frontend no note diferencia: lo que es favorito queda en
+     * `omitidos` y lo que no, en `no_encontrados`.
+     */
+    private function clonarCompartidos(array $seleccion)
+    {
+        $detalle = [];
+
+        foreach ($seleccion as $tipo => $ids) {
+            $ids = array_values(array_unique(array_map('intval', $ids)));
+            $clase = AppServiceProvider::TIPOS_FAVORITOS[$tipo];
+
+            $favoritos = $ids
+                ? $clase::whereIn('id', $ids)->where('fav', true)->pluck('id')->map(fn ($id) => (int) $id)->all()
+                : [];
+
+            $detalle[$tipo] = [
+                'creados' => [],
+                'marcados' => [],
+                'omitidos' => array_values(array_intersect($ids, $favoritos)),
+                'no_encontrados' => array_values(array_diff($ids, $favoritos)),
+            ];
+        }
+
+        return $detalle;
     }
 
     /**

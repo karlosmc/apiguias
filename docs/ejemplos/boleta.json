@@ -1,0 +1,26 @@
+{
+    "tipoDocumento": "03",
+    "serie": "B001",
+    "correlativo": 10,
+    "fechaEmision": "2026-10-07",
+    "cliente": {
+        "tipoDocumento": "1",
+        "numeroDocumento": "12345678",
+        "razonSocial": "JUAN PÉREZ"
+    },
+    "items": [
+        {
+            "descripcion": "Menú del día",
+            "cantidad": 2,
+            "valorUnitario": 12.7119,
+            "precioUnitario": 15,
+            "valorVenta": 25.42,
+            "igv": 4.58
+        }
+    ],
+    "totales": {
+        "gravadas": 25.42,
+        "totalIgv": 4.58,
+        "totalVenta": 30.0
+    }
+}

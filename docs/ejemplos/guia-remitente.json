@@ -1,0 +1,54 @@
+{
+    "tipoDocumento": "09",
+    "serie": "T001",
+    "correlativo": 1,
+    "fechaEmision": "2026-10-07",
+    "destinatario": {
+        "tipoDocumento": "6",
+        "numeroDocumento": "20000000001",
+        "razonSocial": "CLIENTE EJEMPLO S.A."
+    },
+    "documentosRelacionados": [
+        {
+            "tipoDocumento": "01",
+            "numeroDocumento": "F001-125"
+        }
+    ],
+    "envio": {
+        "motivoTraslado": "01",
+        "pesoTotal": 12.5,
+        "unidadPeso": "KGM",
+        "modalidad": "02",
+        "fechaTraslado": "2026-10-07",
+        "partida": {
+            "ubigeo": "150101",
+            "direccion": "AV. LOS OLIVOS 123"
+        },
+        "llegada": {
+            "ubigeo": "150140",
+            "direccion": "JR. UNIÓN 456"
+        },
+        "vehiculos": [
+            {
+                "placa": "ABC123"
+            }
+        ],
+        "conductores": [
+            {
+                "tipoDocumento": "1",
+                "numeroDocumento": "12345678",
+                "nombres": "JUAN",
+                "apellidos": "PÉREZ",
+                "licencia": "Q12345678"
+            }
+        ]
+    },
+    "items": [
+        {
+            "codigo": "P001",
+            "descripcion": "Producto",
+            "cantidad": 3,
+            "unidadMedida": "NIU"
+        }
+    ]
+}

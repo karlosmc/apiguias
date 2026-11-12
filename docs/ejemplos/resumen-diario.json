@@ -1,0 +1,12 @@
+{
+  "fechaReferencia": "2026-10-07",
+  "detalles": [
+    { "tipoDocumento": "03", "idDocumento": "B001-10", "estado": "1" },
+    { "tipoDocumento": "03", "idDocumento": "B001-11", "estado": "3" },
+    {
+      "tipoDocumento": "03", "idDocumento": "B002-5", "estado": "1", "moneda": "PEN",
+      "cliente": { "tipoDocumento": "1", "numeroDocumento": "12345678" },
+      "total": 118, "gravadas": 100, "igv": 18
+    }
+  ]
+}

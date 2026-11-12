@@ -1,0 +1,17 @@
+{
+  "ruc": "20123456789",
+  "razonSocial": "MI EMPRESA S.A.C.",
+  "nombreComercial": "MI TIENDA",
+  "entorno": "beta",
+  "direccion": {
+    "ubigeo": "150101", "departamento": "LIMA", "provincia": "LIMA", "distrito": "LIMA",
+    "direccion": "AV. PRINCIPAL 123", "telefono": "(01) 555-1234", "email": "ventas@miempresa.pe"
+  },
+  "pdf": {
+    "colorPrimario": "#1D4ED8",
+    "piePagina": "Gracias por su preferencia.",
+    "cuentasBancarias": [ { "banco": "BCP", "moneda": "PEN", "numero": "191-1234567-0-12", "cci": "00219100123456701255" } ]
+  },
+  "webhookUrl": "https://mi-erp.pe/webhooks/facturacion",
+  "webhookSecret": "un-secreto-largo-de-al-menos-16"
+}

@@ -22,6 +22,12 @@ use Illuminate\Support\Facades\Auth;
  * Las columnas `fav` y `nombreCorto` del catálogo siguen existiendo: `fav`
  * como respaldo del estado anterior y `nombreCorto` como valor por defecto
  * (el que se puso al crear el registro), accesible con nombreCortoGlobal().
+ *
+ * SWITCH: todo lo anterior aplica solo con `config('favoritos.por_usuario')`
+ * en true (FAVORITOS_POR_USUARIO=true). En false (por defecto) se trabaja como
+ * antes: `fav` y `nombreCorto` se leen y guardan en las columnas del catálogo,
+ * compartidas por todos, y la tabla `favoritos` no se toca. Los métodos y
+ * scopes son los mismos en ambos modos, así que los controladores no cambian.
  */
 trait TieneFavoritos
 {
@@ -46,6 +52,15 @@ trait TieneFavoritos
         return $this->morphMany(Favorito::class, 'favoritable');
     }
 
+    /**
+     * ¿Los favoritos y nombres cortos son por usuario (tabla favoritos) o
+     * compartidos en las columnas del catálogo, como antes?
+     */
+    public static function favoritosPorUsuario()
+    {
+        return (bool) config('favoritos.por_usuario', false);
+    }
+
     protected static function idUsuarioFavorito($idUser = null)
     {
         return $idUser ?: (Auth::check() ? Auth::id() : null);
@@ -58,6 +73,11 @@ trait TieneFavoritos
      */
     public function scopeConPreferencias(Builder $query, $idUser = null)
     {
+        // Modo compartido: fav y nombreCorto ya vienen en las columnas
+        if (! static::favoritosPorUsuario()) {
+            return $query;
+        }
+
         $idUser = static::idUsuarioFavorito($idUser);
         $modelo = $query->getModel();
 
@@ -84,6 +104,10 @@ trait TieneFavoritos
             return $query;
         }
 
+        if (! static::favoritosPorUsuario()) {
+            return $query->where($query->getModel()->qualifyColumn('fav'), $favorito);
+        }
+
         $idUser = static::idUsuarioFavorito($idUser);
         $esFavorito = function ($q) use ($idUser) {
             $q->where('id_user', $idUser)->where('fav', true);
@@ -104,9 +128,14 @@ trait TieneFavoritos
             return $query;
         }
 
-        $idUser = static::idUsuarioFavorito($idUser);
         $patron = '%' . $texto . '%';
         $columna = $query->getModel()->qualifyColumn('nombreCorto');
+
+        if (! static::favoritosPorUsuario()) {
+            return $query->where($columna, 'like', $patron);
+        }
+
+        $idUser = static::idUsuarioFavorito($idUser);
 
         return $query->where(function ($q) use ($columna, $patron, $idUser) {
             $q->where($columna, 'like', $patron)
@@ -121,6 +150,10 @@ trait TieneFavoritos
      */
     public function preferenciaDe($idUser = null)
     {
+        if (! static::favoritosPorUsuario()) {
+            return null;
+        }
+
         $actual = static::idUsuarioFavorito();
         $idUser = $idUser ?: $actual;
 
@@ -148,6 +181,10 @@ trait TieneFavoritos
 
     public function esFavoritoDe($idUser = null)
     {
+        if (! static::favoritosPorUsuario()) {
+            return (bool) ($this->attributes['fav'] ?? false);
+        }
+
         return (bool) optional($this->preferenciaDe($idUser))->fav;
     }
 
@@ -191,6 +228,12 @@ trait TieneFavoritos
     public function aplicarNombreCorto($valor, $idUser = null)
     {
         $valor = trim((string) $valor);
+
+        // Modo compartido: vacío no borra el nombre del catálogo, lo deja igual
+        if (! static::favoritosPorUsuario()) {
+            return $valor === '' ? $this : $this->guardarPreferencia(['nombreCorto' => $valor], $idUser);
+        }
+
         $nombre = $valor === '' ? $this->nombreCortoGlobal() : $valor;
 
         return $this->guardarPreferencia(['nombreCorto' => $nombre], $idUser);
@@ -218,6 +261,10 @@ trait TieneFavoritos
      */
     protected function guardarPreferencia(array $cambios, $idUser = null)
     {
+        if (! static::favoritosPorUsuario()) {
+            return $this->guardarEnCatalogo($cambios);
+        }
+
         $idUser = static::idUsuarioFavorito($idUser);
 
         if (! $idUser || ! $this->exists) {
@@ -261,10 +308,33 @@ trait TieneFavoritos
     }
 
     /**
+     * Modo compartido: guarda `fav` / `nombreCorto` en las columnas del
+     * catálogo, como se hacía antes. Afecta a todos los usuarios.
+     */
+    protected function guardarEnCatalogo(array $cambios)
+    {
+        if (! $this->exists) {
+            return $this;
+        }
+
+        $this->forceFill($cambios);
+
+        if ($this->isDirty(array_keys($cambios))) {
+            $this->save();
+        }
+
+        return $this;
+    }
+
+    /**
      * `fav` ya no devuelve la columna compartida sino el favorito del usuario.
      */
     public function getFavAttribute($value)
     {
+        if (! static::favoritosPorUsuario()) {
+            return (bool) $value;
+        }
+
         if (array_key_exists('es_favorito', $this->attributes)) {
             return (bool) $this->attributes['es_favorito'];
         }
@@ -277,6 +347,10 @@ trait TieneFavoritos
      */
     public function getNombreCortoAttribute($value)
     {
+        if (! static::favoritosPorUsuario()) {
+            return $value;
+        }
+
         $propio = array_key_exists('nombre_corto_usuario', $this->attributes)
             ? $this->attributes['nombre_corto_usuario']
             : optional($this->preferenciaDe())->nombreCorto;

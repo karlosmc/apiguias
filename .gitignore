@@ -19,3 +19,5 @@ yarn-error.log
 
 # Documentación OpenAPI generada con: php artisan docs:openapi
 /openapi.json
+.htaccess
+index.php

@@ -17,6 +17,10 @@ use Illuminate\Validation\ValidationException;
  * si es favorito y el nombre corto que él le puso.
  *
  * Los admin además pueden ver los favoritos de otro usuario y clonarlos.
+ *
+ * Con FAVORITOS_POR_USUARIO=false (por defecto, ver config/favoritos.php) las
+ * mismas rutas trabajan sobre las columnas compartidas `fav` y `nombreCorto`
+ * de cada catálogo, como antes; clonar no copia nada porque todos ven lo mismo.
  */
 class FavoritoController extends Controller
 {
@@ -52,7 +56,7 @@ class FavoritoController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Favorito::where('id_user', Auth::id());
+        $tipo = null;
 
         if ($request->filled('tipo')) {
             $tipo = $this->normalizarTipo($request->input('tipo'));
@@ -60,7 +64,15 @@ class FavoritoController extends Controller
             if (! $tipo) {
                 return $this->tipoInvalido($request->input('tipo'));
             }
+        }
 
+        if (! FavoritosService::porUsuario()) {
+            return response()->json($this->indexCompartido($tipo));
+        }
+
+        $query = Favorito::where('id_user', Auth::id());
+
+        if ($tipo) {
             $query->where('favoritable_type', $tipo);
         }
 
@@ -280,16 +292,59 @@ class FavoritoController extends Controller
         $nombreDestino = User::whereKey($destino)->value('name');
         $copiados = $resumen['creados'] + $resumen['marcados'];
 
+        if (! FavoritosService::porUsuario()) {
+            $mensaje = "Los favoritos son compartidos por todos los usuarios: $nombreDestino ya ve los mismos";
+        } elseif ($copiados) {
+            $mensaje = "Se copiaron $copiados favorito(s) a $nombreDestino";
+        } else {
+            $mensaje = "$nombreDestino ya tenía todos los favoritos elegidos";
+        }
+
         return response()->json([
-            'message' => $copiados
-                ? "Se copiaron $copiados favorito(s) a $nombreDestino"
-                : "$nombreDestino ya tenía todos los favoritos elegidos",
+            'message' => $mensaje,
             'id_user_origen' => $origen,
             'id_user_destino' => $destino,
             'resumen' => $resumen,
             'detalle' => $detalle,
             'exito' => true,
         ]);
+    }
+
+    /**
+     * Modo compartido (config favoritos.por_usuario = false): mismo formato que
+     * el modo por usuario, pero leído de las columnas `fav` y `nombreCorto` de
+     * cada catálogo. `nombresCortos` trae solo los de los favoritos.
+     */
+    private function indexCompartido($soloTipo = null)
+    {
+        $favoritos = [];
+        $nombresCortos = [];
+
+        foreach (AppServiceProvider::TIPOS_FAVORITOS as $tipo => $clase) {
+            if ($soloTipo && $tipo !== $soloTipo) {
+                continue;
+            }
+
+            $filas = $clase::where('fav', true)->get(['id', 'nombreCorto']);
+
+            if ($filas->isEmpty()) {
+                continue;
+            }
+
+            $favoritos[$tipo] = $filas->pluck('id')->values();
+
+            $nombres = $filas->filter(fn ($fila) => $fila->nombreCorto !== null && $fila->nombreCorto !== '')
+                ->pluck('nombreCorto', 'id');
+
+            if ($nombres->isNotEmpty()) {
+                $nombresCortos[$tipo] = $nombres;
+            }
+        }
+
+        return [
+            'favoritos' => collect($favoritos),
+            'nombresCortos' => collect($nombresCortos),
+        ];
     }
 
     /**

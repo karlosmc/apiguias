@@ -1,0 +1,6 @@
+{
+  "fechaReferencia": "2026-10-07",
+  "detalles": [
+    { "tipoDocumento": "01", "serie": "F001", "correlativo": 125, "motivo": "Error en el RUC del cliente" }
+  ]
+}

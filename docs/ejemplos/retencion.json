@@ -1,0 +1,40 @@
+{
+    "tipoDocumento": "20",
+    "serie": "R001",
+    "correlativo": 1,
+    "fechaEmision": "2026-10-07",
+    "regimen": "01",
+    "proveedor": {
+        "tipoDocumento": "6",
+        "numeroDocumento": "20000000001",
+        "razonSocial": "PROVEEDOR S.A.C."
+    },
+    "documentos": [
+        {
+            "tipoDocumento": "01",
+            "idDocumento": "F001-10",
+            "fechaEmision": "2026-10-01",
+            "total": 1000,
+            "montoPago": 1000,
+            "fechaPago": "2026-10-07",
+            "monto": 30,
+            "neto": 970
+        },
+        {
+            "tipoDocumento": "01",
+            "idDocumento": "F001-11",
+            "fechaEmision": "2026-10-01",
+            "moneda": "USD",
+            "total": 500,
+            "montoPago": 500,
+            "fechaPago": "2026-10-07",
+            "tipoCambio": 3.75,
+            "monto": 56.25,
+            "neto": 1818.75
+        }
+    ],
+    "totales": {
+        "total": 86.25,
+        "totalNeto": 2788.75
+    }
+}

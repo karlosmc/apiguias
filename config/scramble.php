@@ -34,7 +34,7 @@ return [
 
 Todos los endpoints, salvo `login` y `registro`, requieren un token Bearer de Sanctum obtenido en `POST /api/login`.
 
-**Favoritos:** los catálogos (productos, clientes, puntos de ubicación, conductores, transportistas y vehículos) devuelven un campo `fav` que es el favorito **del usuario autenticado**, no un valor compartido. Se puede filtrar con `?fav=1` y alternar desde `/api/favoritos`.',
+**Favoritos:** los catálogos (productos, clientes, puntos de ubicación, conductores, transportistas y vehículos) devuelven los campos `fav` y `nombreCorto`. Por defecto son **compartidos** por todos los usuarios (columnas del catálogo); con `FAVORITOS_POR_USUARIO=true` son **del usuario autenticado**. Se puede filtrar con `?fav=1` y alternar desde `/api/favoritos` en ambos modos.',
     ],
 
     /*
