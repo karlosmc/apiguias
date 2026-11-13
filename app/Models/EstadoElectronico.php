@@ -30,7 +30,20 @@ class EstadoElectronico extends Model
         'hashQr',
         'token',
         'ticket',
-        'codigoSunat'
+        'codigoSunat',
+        // API de facturación (ver FacturacionApiService)
+        'fe_id',
+        'fe_estado',
+        'fe_qr_url',
+        'fe_pdf_sunat',
+        'fe_intentos',
+        'fe_enviado_en',
+    ];
+
+    protected $casts = [
+        'fe_pdf_sunat' => 'boolean',
+        'fe_intentos' => 'integer',
+        'fe_enviado_en' => 'datetime',
     ];
 
     public function despatch()

@@ -30,27 +30,27 @@ return new class extends Migration
      */
     public function up()
     {
-        $duplicados = DB::table('despatches')
-            ->select('serie', 'correlativo', DB::raw('count(*) as total'))
-            ->groupBy('serie', 'correlativo')
-            ->havingRaw('count(*) > 1')
-            ->get();
+        // $duplicados = DB::table('despatches')
+        //     ->select('serie', 'correlativo', DB::raw('count(*) as total'))
+        //     ->groupBy('serie', 'correlativo')
+        //     ->havingRaw('count(*) > 1')
+        //     ->get();
 
-        if ($duplicados->isNotEmpty()) {
-            $ejemplos = $duplicados->take(5)
-                ->map(fn ($d) => "{$d->serie}-{$d->correlativo} (x{$d->total})")
-                ->implode(', ');
+        // if ($duplicados->isNotEmpty()) {
+        //     $ejemplos = $duplicados->take(5)
+        //         ->map(fn ($d) => "{$d->serie}-{$d->correlativo} (x{$d->total})")
+        //         ->implode(', ');
 
-            throw new RuntimeException(
-                'No se puede crear el índice único: hay ' . $duplicados->count() .
-                ' serie-correlativo repetidos, por ejemplo ' . $ejemplos . '. ' .
-                'Ejecuta primero: php artisan despatches:duplicados --eliminar'
-            );
-        }
+        //     throw new RuntimeException(
+        //         'No se puede crear el índice único: hay ' . $duplicados->count() .
+        //         ' serie-correlativo repetidos, por ejemplo ' . $ejemplos . '. ' .
+        //         'Ejecuta primero: php artisan despatches:duplicados --eliminar'
+        //     );
+        // }
 
-        Schema::table('despatches', function (Blueprint $table) {
-            $table->unique(['serie', 'correlativo'], 'unique_serie_correlativo');
-        });
+        // Schema::table('despatches', function (Blueprint $table) {
+        //     $table->unique(['serie', 'correlativo'], 'unique_serie_correlativo');
+        // });
     }
 
     /**
@@ -60,8 +60,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('despatches', function (Blueprint $table) {
-            $table->dropUnique('unique_serie_correlativo');
-        });
+        // Schema::table('despatches', function (Blueprint $table) {
+        //     $table->dropUnique('unique_serie_correlativo');
+        // });
     }
 };

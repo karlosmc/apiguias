@@ -7,7 +7,7 @@ Lo consume un frontend propio. Más detalle en [docs/ARQUITECTURA.md](docs/ARQUI
 - Laravel 9 (PHP ^8.0.2), MySQL como conexión por defecto.
 - Paquetes: Sanctum (tokens Bearer), Scramble (OpenAPI en `/docs/api`), Guzzle, PhpSpreadsheet (exportar Excel) y doctrine/dbal.
 - Conexiones extra a SQL Server: `sqlsrv` y `sqlsrv2`, que usa la migración de guías hacia el ERP FAFIO.
-- No hay librería XML/SUNAT (greenter), colas, cron ni generación de PDF. Ver "Flujo de una guía".
+- No hay librería XML/SUNAT (greenter), colas ni cron: la emisión la hace la API de facturación propia. Ver "Flujo de una guía".
 
 ## Comandos
 ```bash
@@ -16,7 +16,10 @@ php artisan migrate
 php artisan route:list --path=<prefijo>
 php artisan despatches:duplicados [--eliminar]   # detecta (y opcionalmente borra) guías serie+correlativo duplicadas
 php artisan docs:openapi                         # exporta openapi.json (Scramble)
+bash scripts/backup-configuracion.sh [destino]   # backup de configuración sin guías (lee el .env)
+bash scripts/restaurar-configuracion.sh <archivo> [--forzar]
 ```
+- Despliegue: una instalación (clone + `.env` + BD) por empresa. Ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
 - Tests: solo los de ejemplo (`tests/`). `phpunit.xml` **no** usa sqlite en memoria: los tests usarían la BD real del `.env`.
 
 ## Convenciones
@@ -45,17 +48,19 @@ php artisan docs:openapi                         # exporta openapi.json (Scrambl
 - **Credenciales SUNAT**: en `sunat_parameters` (fila `activo=1` de la primera `Empresa`): client_id/secret GRE, usuario/clave SOL y certificado PEM en base64.
 - **Una sola empresa**: el código usa `Empresa::first()`.
 
-## Flujo de una guía (estado actual)
-1. `POST /api/despatches` (`DespatchController::store`) guarda todo en una transacción y crea `EstadoElectronico` con estado `P`.
-2. **Un proceso externo** (el front u otro servicio) arma el XML, firma, envía a SUNAT y consulta el ticket. Para eso lee las credenciales con `GET /api/sunat/parametros`.
-3. Ese proceso escribe el resultado con `PUT /api/estadoelectronico/{id}` (update genérico, sin validación).
+## Flujo de una guía
+1. **Guardar**: `POST /api/despatches` (`DespatchController::store`) guarda todo en una transacción y crea `EstadoElectronico` con estado `P`. Funciona como borrador para revisar la guía.
+2. **Guardar y enviar**: el mismo `POST` (o `PUT`) con `enviar=true`. Después de guardar, envía la guía por la API de facturación (`G:\codeigniterprojects\FacturacionApi`) y agrega `envio` a la respuesta. Si el envío falla, la guía queda guardada.
+3. **Enviar un borrador**: `POST /api/despatches/{id}/enviar`. Para consultar: `POST /api/despatches/{id}/consultar`. Para PDF, XML o CDR: `GET /api/despatches/{id}/archivo`.
+4. **Resultado de SUNAT**: llega por `POST /api/webhooks/facturacion` (público, firmado con HMAC) a `FacturacionApiService::aplicar()`. Estado local: `F` si fue aceptada u observada; `P` en cualquier otro caso, también si fue rechazada (se corrige y se reenvía con el mismo número).
+5. **Mientras SUNAT procesa la guía o después de aceptada**, `update` responde 409.
 
-Se planea que **guiasapi** emita a través de la API de facturación propia (`G:\codeigniterprojects\FacturacionApi`). Ver [docs/INTEGRACION-API-GUIAS.md](docs/INTEGRACION-API-GUIAS.md).
+La lógica está en `app/Services/FacturacionApiService.php`. Solo se emite la guía de remitente (09); no hay guía de transportista. La conexión (URL, token y secreto del webhook, estos dos cifrados) se guarda en `empresa.fe_*` y se administra con `/api/empresa/facturacion` (solo admin). Lo que falte ahí se toma del `.env` (`FE_*` en `config/services.php`). El flujo antiguo (un proceso externo que firma y luego hace `PUT /api/estadoelectronico/{id}`) sigue funcionando. Detalle en [docs/INTEGRACION-API-GUIAS.md](docs/INTEGRACION-API-GUIAS.md).
 
 ## Integraciones
 - **FAFIO** (ERP): `MigracionGuiasController` lee almacenes y series de SQL Server y migra guías. `AlmacenFafio` mapea almacén ↔ punto de ubicación. Usar `nombreCortoGlobal()` para los datos que salen hacia FAFIO.
 - **SCOP**: `ScopApiService` usa la `x-api-key` de `config('services.scop')`, con caché, timeouts y log de llamadas lentas. Es el patrón a copiar para nuevos clientes HTTP.
-- **Factiliza**: `FactilizaCommonServices`, consulta de RUC/DNI.
+- **Factiliza**: `FactilizaCommonServices`, consulta de RUC/DNI (ya configurado).
 
 ## Favoritos y nombre corto (switch)
 - `config/favoritos.php` → `FAVORITOS_POR_USUARIO`:
@@ -66,8 +71,8 @@ Se planea que **guiasapi** emita a través de la API de facturación propia (`G:
 ## Cuidado
 - `docs/INTEGRACION-ERP.md` y `docs/ejemplos/*.json` describen la **API de facturación externa**, no las rutas de este repo.
 - **Seguridad pendiente**:
-  - Token JWT de Factiliza escrito en `app/Services/FactilizaCommonServices.php`.
-  - `GET /api/sunat/parametros` devuelve secretos y certificado.
-  - `POST /api/convert` y `/api/factiliza/*` son públicos.
+  - `GET /api/sunat/parametros` devuelve secretos y certificado (lo usa el flujo de firma antiguo).
+  - `POST /api/convert` es público.
+- Factiliza ya está configurado y no forma parte de los cambios: no tocarlo.
 - `AlmacenFafio` referencia `PuntoUbicacion::class` (con U mayúscula), lo que falla en Linux, porque el modelo es `Puntoubicacion`.
 - No hay base local accesible por defecto: pide al usuario que pruebe contra su BD.

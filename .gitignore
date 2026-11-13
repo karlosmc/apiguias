@@ -7,6 +7,9 @@
 .env
 .env.backup
 .env.production
+# .env por empresa (p. ej. .env.empresa-b para los scripts de backup)
+.env.*
+!.env.example
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml

@@ -2,7 +2,9 @@
 
 La API de facturación es el proyecto `G:\codeigniterprojects\FacturacionApi` (Laravel). Su contrato para clientes está en [INTEGRACION-ERP.md](INTEGRACION-ERP.md), sección 6 (guías). Este documento explica qué se necesita para que **guiasapi** emita sus guías a través de esa API.
 
-> Estado: **análisis y diseño**. Todavía no hay código de integración en guiasapi.
+> Estado: **implementado en guiasapi** (sección 5). Falta la puesta en marcha: inscribir la empresa, configurar el `.env`, migrar y adaptar el front (sección 6).
+>
+> Entorno inicial: **beta**. Webhook en desarrollo: `http://127.0.0.1:8091/api/webhooks/facturacion` (en el VPS cambia; ver sección 6).
 
 ---
 
@@ -41,7 +43,7 @@ Cuerpo (`docs/ejemplos/empresa.json`; reglas en `FacturacionApi/app/Http/Request
 | `direccion.{ubigeo, departamento, provincia, distrito, direccion}` | Sí | `empresa.direccion` (+ ubigeo, que hoy no está en `empresa`) |
 | `direccion.{telefono, email, codigoDomicilio}` | No | `empresa.email` |
 | `entorno` | No | `beta` (pruebas) o `produccion` |
-| `webhookUrl` | No | URL pública de guiasapi, p. ej. `https://<dominio>/api/webhooks/facturacion` |
+| `webhookUrl` | No | Desarrollo: `http://127.0.0.1:8091/api/webhooks/facturacion`. En el VPS, la URL pública de guiasapi |
 | `webhookSecret` | No (mín. 16 caracteres) | Secreto compartido; generar uno largo y guardarlo también en el `.env` de guiasapi |
 
 ### Paso 2 — certificado digital
@@ -115,11 +117,11 @@ Hay una implementación de referencia en `G:\fullprojects\topsoft\backend-erp-to
 
 | JSON | Origen |
 |---|---|
-| `tipoDocumento` (`09` o `31`) | **Falta columna.** Hoy solo se puede deducir de la serie (`T###` → 09, `V###` → 31) |
+| `tipoDocumento` | Siempre `09` (guía de remitente). guiasapi no emite guía de transportista (31) por ahora |
 | `serie`, `correlativo`, `fechaEmision`, `observacion` | `despatches` |
 | `destinatario{tipoDocumento, numeroDocumento, razonSocial}` | `clientes` (`id_cliente`) + `tipo_documentos` |
 | `comprador{…}` | `clientes` (`id_comprador`) |
-| `proveedor{…}` / `remitente{…}` | `clientes` (`id_tercero`). Hay que definir cuál corresponde según el motivo |
+| `proveedor{…}` | `clientes` (`id_tercero`) |
 | `documentosRelacionados[]` | `adicionales` (`tipo`, `nro`, `emisor` → `rucEmisor`) |
 | `envio.motivoTraslado` / `descripcionMotivo` | `motivo_traslado.codTraslado` / descripción |
 | `envio.modalidad` | `modalidad_traslado.modTraslado` |
@@ -128,7 +130,7 @@ Hay una implementación de referencia en `G:\fullprojects\topsoft\backend-erp-to
 | `envio.pesoTotal`, `unidadPeso`, `numeroBultos`, `indicadorTransbordo`, `sustentoPeso` | `shipments.pesoTotal`, `undPesoTotal`, `numBultos`, `indTransbordo`, `sustentoPeso` |
 | `envio.partida` / `envio.llegada` `{ubigeo, direccion, codigoEstablecimiento}` | `shipment_puntoubicacions` con tipo P / L (`codLocal`) |
 | `envio.transportista{numeroDocumento, razonSocial, registroMtc}` | `transportistas` (`numDoc`, `rznSocial`, `nroMtc`) |
-| `envio.vehiculos[]{placa, numeroCirculacion, numeroAutorizacion, entidadAutorizadora}` | `vehiculos` vía `shipment_vehiculo`, el principal (P) primero |
+| `envio.vehiculos[]{placa, numeroCirculacion, numeroAutorizacion, entidadAutorizadora}` | `vehiculos` vía `shipment_vehiculo`, el principal (P) primero. `numeroAutorizacion` y `entidadAutorizadora` (`nroAutorizacion` / `codEmisor`) solo en transporte público (01) y si están los dos; en privado (02) no se envían |
 | `envio.conductores[]{tipoDocumento, numeroDocumento, nombres, apellidos, licencia}` | `conductores` vía `shipment_conductor`, el principal (P) primero |
 | `envio.puerto` / `envio.aeropuerto` | `puerto` (`id_puerto` / `id_aeropuerto`) |
 | `envio.vehiculoMenor` | `indicadores` (indicador M1/L), por mapear |
@@ -155,27 +157,84 @@ Estados de la API → `estado_electronico.estado`:
 
 ---
 
-## 5. Diseño propuesto (fase siguiente)
+## 5. Lo implementado en guiasapi
 
-1. **Configuración**: en `config/services.php` agregar `facturacion => [url, token, webhook_secret, timeout]`, con `FE_API_URL`, `FE_API_TOKEN` y `FE_WEBHOOK_SECRET` en `.env`.
-2. **Migración**:
-   - En `estado_electronico`: `fe_id` (único), `fe_qr_url`, `fe_pdf_sunat` y `intentos`.
-   - En `despatches`: `tipoDocumento` (por defecto `09`).
-3. **`app/Services/FacturacionApiService.php`**: cliente HTTP con el patrón de `ScopApiService` (timeouts, log de llamadas lentas, mensajes amigables). Métodos:
-   - `emitirGuia(Despatch)`, que arma el JSON de la sección 4.
-   - `consultar(feId)`, `pdf(feId, formato)` y `reenviar(feId)`.
-4. **Emisión**: un endpoint `POST /api/despatches/{id}/emitir`, o emitir al final de `store`. Si la respuesta es 409 (ya existe), se trata como éxito y se guarda `data`. Si es 422, se devuelven los errores al front.
-5. **Webhook**: `POST /api/webhooks/facturacion`, fuera de `auth:sanctum`. Verifica la firma (sección 3), busca por `fe_id` y actualiza `EstadoElectronico`. Debe ser idempotente.
-6. **PDF**: `GET /api/despatches/pdf/{id}` pasa a hacer de proxy de `GET /documents/{fe_id}/pdf?formato=a4`.
-7. **Después**, cuando el front ya no firme: retirar los secretos de `GET /api/sunat/parametros` y proteger `/api/convert`.
+| Pieza | Archivo |
+|---|---|
+| Configuración `FE_*` | `config/services.php` → `facturacion`, `.env.example` |
+| Columnas `fe_id`, `fe_estado`, `fe_qr_url`, `fe_pdf_sunat`, `fe_intentos`, `fe_enviado_en` | `database/migrations/2026_11_12_090000_add_api_facturacion_to_estado_electronico.php` |
+| Armado del JSON, envío, consulta, descarga y aplicación del resultado | `app/Services/FacturacionApiService.php` |
+| Webhook (verifica HMAC, idempotente, nunca retrocede de aceptada) | `app/Http/Controllers/WebhookFacturacionController.php` |
+| Endpoints de guía | `app/Http/Controllers/DespatchController.php` (`store`/`update` con `enviar`, `enviar`, `consultar`, `archivo`) |
+
+Solo se emite la guía de remitente (`09`). El `tercero` de la guía se envía como `proveedor`.
+
+### Configuración de la conexión (en la empresa, como en el ERP)
+
+URL, token y secreto del webhook se guardan en la tabla `empresa`. El token y el secreto van cifrados con el `APP_KEY` de guiasapi y nunca se devuelven. Si un dato no está en la empresa, se usa el del `.env` (`FE_API_URL`, `FE_API_TOKEN`, `FE_WEBHOOK_SECRET`). Rutas solo para admin:
+
+| Llamada | Uso |
+|---|---|
+| `GET /api/empresa/facturacion` | Muestra la URL, si hay token y secreto, de dónde sale cada dato (`empresa`, `env` o `falta`) y la `webhookUrl` que hay que registrar en la API |
+| `PUT /api/empresa/facturacion` | `{"apiUrl": "...", "token": "...", "webhookSecret": "..."}`; se envía solo lo que cambia, y un valor vacío vuelve al `.env` |
+| `POST /api/empresa/facturacion/probar` | Llama a `GET /companies/{ruc}` de la API y dice si está todo listo (token, RUC inscrito, credenciales GRE, certificado, webhook) |
+
+El **secreto del webhook** no es un dato que entregue SUNAT ni la API: es una contraseña que se inventa (mínimo 16 caracteres). Se escribe la misma en los dos lados: como `webhookSecret` al inscribir la empresa en la API y como `webhookSecret` aquí. Para generar una: `php -r "echo bin2hex(random_bytes(24));"`.
+
+### Contrato para el front
+
+| Acción en pantalla | Llamada | Notas |
+|---|---|---|
+| **Guardar** (borrador) | `POST /api/despatches` (o `PUT /api/despatches/{id}`) | Igual que hoy. Estado `P`, `descripcion` = `PENDIENTE DE ENVIO` |
+| **Guardar y enviar** | La misma llamada con `"enviar": true` en el cuerpo | La respuesta trae además `envio: {exito, message, errors, electronico}`. Si `envio.exito` es false, la guía **sí se guardó**: se muestra `envio.message` / `envio.errors` y se puede corregir y reenviar |
+| **Enviar** un borrador | `POST /api/despatches/{id}/enviar` | 200 enviado; 422 la API rechazó los datos (`errors`); 409 ya aceptada o de baja; 502 la API no responde; 503 falta configuración |
+| **Actualizar estado** | `POST /api/despatches/{id}/consultar` | Por si el webhook no llegó |
+| **PDF / XML / CDR** | `GET /api/despatches/{id}/archivo?tipo=pdf&formato=a4` | `formato`: `a4` (el "Ver PDF") o `sunat` (el PDF del enlace QR de SUNAT; si la API no lo tiene, guiasapi lo baja directo de `fe_qr_url`/`hashQr`, solo enlaces https de sunat.gob.pe). `&descargar=1` para descargar. 404/503 con `urlQr` si aún no hay |
+| Listados | `estadoelectronico` | Además de lo de siempre: `feId`, `feEstado`, `feQrUrl`, `fePdfSunat` |
+
+Estados que verá el front:
+
+| `feEstado` | `estado` | `estadoSunat` | Qué hacer |
+|---|---|---|---|
+| null | `P` | (vacío) | Borrador: se puede editar y enviar |
+| `pendingTicket` | `P` | `PENDIENTE` | Esperar; la guía no se puede editar (409) |
+| `accepted` / `observed` | `F` | `ACEPTADO` / `OBSERVADO` | Terminada. Imprimir el PDF con QR |
+| `rejected` | `P` | `RECHAZADO` | Corregir (PUT) y volver a enviar con el mismo número |
+| `error` | `P` | `ERROR` | Volver a enviar (reintenta el mismo documento) |
 
 ---
 
-## 6. Pendientes por confirmar
+## 6. Qué falta (checklist de puesta en marcha)
 
-- URL pública de guiasapi para `webhookUrl`, y si el servidor de la API puede alcanzarla.
-- Entorno inicial: `beta` (credenciales GRE de prueba) o `produccion`.
-- Que el worker de colas y el scheduler corran en el servidor de la API (webhooks, consulta de tickets, descarga del PDF de SUNAT).
-- Formato de `sunat_parameters.username`: si incluye el RUC, quitarlo al inscribir.
-- Qué rol cumple `id_tercero` (remitente o proveedor) según el motivo de traslado.
-- Si la emisión será automática al guardar o con un botón "Emitir".
+**En la API de facturación** (`FacturacionApi`). Para levantarla en desarrollo se usan tres procesos, cada uno en su propia terminal:
+```bash
+php artisan serve --port=8090   # la API: http://127.0.0.1:8090/api/v1 (docs en /docs/api)
+php artisan queue:work          # envía los webhooks y los envíos asíncronos
+php artisan schedule:work       # consulta tickets cada 5 min y descarga el PDF de SUNAT
+```
+Sin `queue:work` la guía se emite, pero el webhook nunca sale. En el VPS se dejan como servicios (Supervisor o systemd).
+
+- [ ] Tener la API corriendo y anotar su URL base (p. ej. `http://127.0.0.1:8000/api/v1`).
+- [ ] Correr el worker de colas (`php artisan queue:work`) y el scheduler. Sin ellos no salen los webhooks ni se consulta el ticket en segundo plano.
+- [ ] Crear el token de administrador e inscribir la empresa (sección 2) con `entorno: "beta"`, `webhookUrl: "http://127.0.0.1:8091/api/webhooks/facturacion"` y un `webhookSecret` de al menos 16 caracteres.
+- [ ] Subir el certificado y las credenciales SOL y GRE. `usuarioSol` va **sin** el RUC; en beta, las credenciales GRE son las de prueba.
+- [ ] Crear el token de guiasapi: `php artisan fe:client:create "guiasapi" --ruc=<RUC>`.
+
+**En guiasapi**:
+- [ ] `php artisan migrate`: agrega las columnas `fe_*` a `estado_electronico` y a `empresa`.
+- [ ] `PUT /api/empresa/facturacion` con `apiUrl` (`http://127.0.0.1:8090/api/v1`), `token` y `webhookSecret`. Después, `POST /api/empresa/facturacion/probar`.
+- [ ] Servir guiasapi en el puerto 8091, como dice el `webhookUrl`.
+
+**En el front**:
+- [ ] Botón "Guardar y enviar", que manda `enviar: true`, y botón "Enviar" en los borradores, que llama a `/despatches/{id}/enviar`.
+- [ ] Mostrar `envio.message` y `envio.errors` cuando el envío falle.
+- [ ] Mostrar `estadoSunat` y `descripcion`, y el PDF desde `/despatches/{id}/archivo`.
+
+**Al pasar al VPS / producción**:
+- [ ] Cambiar `webhookUrl` con `PATCH /companies/{ruc}` (`{"webhookUrl": "https://<dominio>/api/webhooks/facturacion"}`). El dominio debe ser alcanzable desde el servidor de la API.
+- [ ] Cambiar a `entorno: "produccion"` (lo hace el token de administrador) y subir las credenciales GRE de producción.
+- [ ] Actualizar `apiUrl` con `PUT /api/empresa/facturacion` en el VPS.
+
+**Pendiente de decidir**:
+- `baja` sigue siendo solo local. Una GRE aceptada no se anula por comunicación de baja: se da de baja en SUNAT (SOL).
+- Cuando el front ya no firme por su cuenta, retirar los secretos de `GET /api/sunat/parametros`.

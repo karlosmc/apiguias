@@ -7,7 +7,8 @@
 | Públicas | `POST /login`, `POST /registro`, `POST /convert` (PFX → PEM), `GET /factiliza/consulta`, `POST /factiliza/masivo` |
 | `auth:sanctum`, CRUD (`apiResource`) | `productos`, `puntos`, `despatches`, `shipments`, `clientes`, `conductor`, `transportistas`, `sunat`, `tokensunat`, `ubigeos`, `vehiculos`, `puntoemision`, `numeracion`, `estadoelectronico`, `scop` |
 | `auth:sanctum`, búsquedas | `/{recurso}/buscar` para productos, puntos, clientes, conductor, transportistas, vehiculos, user, despatches, estadoelectronico |
-| `auth:sanctum`, guías | `PUT /despatches/baja/{id}`, `GET /despatches/pdf/{id}` (devuelve JSON, no un PDF) |
+| `auth:sanctum`, guías | `PUT /despatches/baja/{id}`, `GET /despatches/pdf/{id}` (devuelve JSON, no un PDF), `POST /despatches/{id}/enviar`, `POST /despatches/{id}/consultar`, `GET /despatches/{id}/archivo` |
+| Pública, con firma | `POST /webhooks/facturacion` (webhook de la API de facturación; throttle 120/min) |
 | `auth:sanctum`, otras | `/sunat/parametros`, `/numeracion/actualbypunto`, `/numeracion/userid`, `/usuario/{id}`, `/estadoelectronico/descargar`, `POST /scop/consulta`, `GET /scop/disponible`, `/migracion/{buscar,almacenes,migrar}`, `POST /logout` |
 | Favoritos | `GET/POST /favoritos`, `PUT/DELETE /favoritos/{tipo}/{id}` |
 | `admin` | `GET /favoritos/usuario/{id}`, `POST /favoritos/clonar` |
@@ -31,7 +32,7 @@
 | `AlmacenFafio` | Almacén FAFIO ↔ punto de ubicación (entrada/salida) | — |
 | `Favorito` | Preferencias por usuario (morph) | Solo con `FAVORITOS_POR_USUARIO=true` |
 
-## Flujo actual de una guía
+## Flujo antiguo de una guía (sigue disponible)
 
 ```
 Front ──POST /api/despatches──▶ DespatchController::store (transacción)
@@ -51,6 +52,8 @@ Otros detalles del flujo:
 - `baja` solo marca `B` localmente y libera los SCOP; no comunica nada a SUNAT.
 - `EstadoElectronicoController::descargar` descarga XML, PDF o CDR desde `env('DB_ELECTRONICO_HOST') . rutaX` y los entrega en un zip.
 
+El flujo nuevo, con la API de facturación, está en [INTEGRACION-API-GUIAS.md](INTEGRACION-API-GUIAS.md).
+
 ## Variables `.env` propias
 
 | Variable | Uso |
@@ -60,4 +63,5 @@ Otros detalles del flujo:
 | `API_SCOP`, `API_KEY_SCOP`, `API_SCOP_CONNECT_TIMEOUT`, `API_SCOP_TIMEOUT`, `API_SCOP_CACHE_MINUTOS`, `API_SCOP_CACHE_MINUTOS_HISTORICO`, `API_SCOP_LOG_LENTO` | Cliente SCOP (`config/services.php`) |
 | `DATABASE_SQL_*` | Conexión `sqlsrv` (FAFIO) |
 | `DATABASE2_URL`, `DATABASE2_SQL_*` | Conexión `sqlsrv2` (FAFIO, tabla Almacen) |
-| `DB_ELECTRONICO_HOST` | Host desde el que se descargan XML, PDF y CDR |
+| `DB_ELECTRONICO_HOST` | Host desde el que se descargan XML, PDF y CDR (flujo antiguo) |
+| `FE_API_URL`, `FE_API_TOKEN`, `FE_WEBHOOK_SECRET`, `FE_RUC`, `FE_API_TIMEOUT` | API de facturación (`config/services.php` → `facturacion`) |

@@ -16,8 +16,20 @@ class Empresa extends Model
         'email',
         'ruc',
         'logo',
-        'folder'
+        'folder',
+        // Conexión con la API de facturación (ver FacturacionApiService)
+        'fe_api_url',
+        'fe_api_token',
+        'fe_webhook_secret',
+    ];
 
+    // Nunca salen en un JSON de la empresa
+    protected $hidden = ['fe_api_token', 'fe_webhook_secret'];
+
+    // Cifrados con el APP_KEY: si cambia, hay que volver a cargarlos
+    protected $casts = [
+        'fe_api_token' => 'encrypted',
+        'fe_webhook_secret' => 'encrypted',
     ];
 
 

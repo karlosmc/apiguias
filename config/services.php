@@ -45,4 +45,18 @@ return [
         'log_lento' => env('API_SCOP_LOG_LENTO', 5),
     ],
 
+    // API de facturación propia (FacturacionApi): emite las guías a SUNAT.
+    // Ver docs/INTEGRACION-API-GUIAS.md
+    'facturacion' => [
+        // Base con /api/v1, p. ej. http://127.0.0.1:8000/api/v1
+        'url' => env('FE_API_URL'),
+        // Token de `php artisan fe:client:create "guiasapi" --ruc=<RUC>` (en la API)
+        'token' => env('FE_API_TOKEN'),
+        // Mismo valor que `webhookSecret` de la empresa en la API
+        'webhook_secret' => env('FE_WEBHOOK_SECRET'),
+        // RUC emisor; si no se configura se usa el de la tabla empresa
+        'ruc' => env('FE_RUC'),
+        'timeout' => env('FE_API_TIMEOUT', 30),
+    ],
+
 ];

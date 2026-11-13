@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConductorController;
+use App\Http\Controllers\ConfiguracionFacturacionController;
 use App\Http\Controllers\ConsultaScopApiController;
 use App\Http\Controllers\DespatchController;
 
@@ -23,6 +24,7 @@ use App\Http\Controllers\TransportistaController;
 use App\Http\Controllers\UbigeoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehiculoController;
+use App\Http\Controllers\WebhookFacturacionController;
 use App\Http\Resources\EstadoElectronicoCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -74,6 +76,11 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::get('/despatches/buscar', [DespatchController::class, 'buscar']);
     Route::get('/despatches/pdf/{id}', [DespatchController::class, 'showpdf']);
 
+    // Emisión por la API de facturación (ver docs/INTEGRACION-API-GUIAS.md)
+    Route::post('/despatches/{id}/enviar', [DespatchController::class, 'enviar']);
+    Route::post('/despatches/{id}/consultar', [DespatchController::class, 'consultar']);
+    Route::get('/despatches/{id}/archivo', [DespatchController::class, 'archivo']);
+
     Route::get('/estadoelectronico/buscar', [EstadoElectronicoController::class, 'buscar']);
     Route::get('/estadoelectronico/descargar', [EstadoElectronicoController::class, 'descargar']);
     
@@ -86,6 +93,11 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::middleware('admin')->group(function () {
         Route::get('/favoritos/usuario/{id}', [FavoritoController::class, 'deUsuario']);
         Route::post('/favoritos/clonar', [FavoritoController::class, 'clonar']);
+
+        // Conexión con la API de facturación (URL, token y secreto del webhook)
+        Route::get('/empresa/facturacion', [ConfiguracionFacturacionController::class, 'show']);
+        Route::put('/empresa/facturacion', [ConfiguracionFacturacionController::class, 'update']);
+        Route::post('/empresa/facturacion/probar', [ConfiguracionFacturacionController::class, 'probar']);
     });
 
     Route::get('/favoritos', [FavoritoController::class, 'index']);
@@ -118,6 +130,12 @@ Route::middleware('auth:sanctum')->group(function(){
 Route::post('/convert',[CertificateController::class,'convertPfxToPem'])->name('pfxtopem');
 Route::post('/registro',[AuthController::class,'register']);
 Route::post('/login',[AuthController::class,'login']);
+
+// Webhook de la API de facturación. Va FUERA de auth:sanctum a propósito: lo
+// llama la API, no un usuario. Lo protege la firma X-FE-Signature (HMAC con
+// FE_WEBHOOK_SECRET), y el throttle evita que se abuse de la URL pública.
+Route::post('/webhooks/facturacion', [WebhookFacturacionController::class, 'facturacion'])
+    ->middleware('throttle:120,1');
 
 
 

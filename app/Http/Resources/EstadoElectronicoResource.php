@@ -31,6 +31,11 @@ class EstadoElectronicoResource extends JsonResource
             'hashQr'=> $this->hashQr,
             'token'=>$this->token,
             'ticket'=>$this->ticket,
+            // API de facturación: null mientras la guía no se envíe por ella
+            'feId'=>$this->fe_id,
+            'feEstado'=>$this->fe_estado,
+            'feQrUrl'=>$this->fe_qr_url,
+            'fePdfSunat'=>(bool) $this->fe_pdf_sunat,
             'id_user'=>$this->despatch?$this->despatch->id_user:null,
             'name'=>$this->usuario?$this->usuario->name:null,
         ];

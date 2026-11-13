@@ -15,11 +15,13 @@ use App\Models\MotivoTraslado;
 use App\Models\Numeracion;
 use App\Models\Scop;
 use App\Models\Shipment;
+use App\Services\FacturacionApiService;
 use App\Models\ShipmentConductor;
 use App\Models\ShipmentIndicadores;
 use App\Models\ShipmentPuntoubicacion;
 use App\Models\ShipmentVehiculo;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -250,7 +252,7 @@ class DespatchController extends Controller
 
             // print_r($request->version);q
 
-            foreach ($request->details as $detalles) {
+            foreach ($request->details ?? [] as $detalles) {
                 # code...
                 DespatchProducto::create([
                     'id_despatch' => $id_despatch,
@@ -262,7 +264,7 @@ class DespatchController extends Controller
                     'cantidad' => $detalles['cantidad'],
                 ]);
             }
-            foreach ($request->addDocs as $docs) {
+            foreach ($request->addDocs ?? [] as $docs) {
                 # code...
                 Adicionales::create([
                     'id_despatch' => $id_despatch,
@@ -304,7 +306,7 @@ class DespatchController extends Controller
             $shipment->save();
             $id_shipment = $shipment->id;
 
-            foreach ($envio['indicadores'] as $ind) {
+            foreach ($envio['indicadores'] ?? [] as $ind) {
                 # code...
                 $idIndicador = Indicadores::where('indicador', $ind)->first()->id;
 
@@ -348,7 +350,7 @@ class DespatchController extends Controller
                     'id_vehiculo' => $vehiculo['id'],
                     'tipo' => 'P'
                 ]);
-                $secundarios = $vehiculo['secundarios'];
+                $secundarios = $vehiculo['secundarios'] ?? [];
 
                 if ($secundarios) {
                     foreach ($secundarios as $secu) {
@@ -362,7 +364,7 @@ class DespatchController extends Controller
                 }
             }
 
-            foreach ($envio['choferes'] as $chofer) {
+            foreach ($envio['choferes'] ?? [] as $chofer) {
                 ShipmentConductor::create([
                     'id_shipment' => $id_shipment,
                     'id_conductor' => $chofer['id'],
@@ -394,12 +396,20 @@ class DespatchController extends Controller
 
             DB::commit();
 
-            return [
+            $respuesta = [
                 'message' => "Guia electrónica con id {$id_shipment} insertada con éxito",
                 'despatch' => $despatch,
                 'exito' => true,
                 'electronico' => $estadoelectronico->id
             ];
+
+            // "Guardar y enviar". Sin `enviar` la guía queda guardada como
+            // borrador (estado P), igual que antes.
+            if ($request->boolean('enviar')) {
+                $respuesta['envio'] = $this->enviarAApi($despatch);
+            }
+
+            return $respuesta;
         } catch (QueryException $e) {
             // Última red: el índice único de la base rechazó la guía repetida.
             DB::rollBack();
@@ -623,6 +633,18 @@ class DespatchController extends Controller
             ], 404);
         }
 
+        // Ya está en SUNAT (o esperando su respuesta): editarla dejaría los
+        // datos locales distintos de lo declarado.
+        $electronico = EstadoElectronico::where('id_despatch', $despatch->id)->first();
+        $bloqueados = array_merge(FacturacionApiService::EN_PROCESO, FacturacionApiService::FINALES);
+        if ($electronico && in_array($electronico->fe_estado, $bloqueados, true)) {
+            return response()->json([
+                'error' => 'La guía ya fue enviada a SUNAT y no se puede modificar.',
+                'message' => $electronico->descripcion,
+                'exito' => false,
+            ], 409);
+        }
+
         // Si el campo no viene en la petición no se toca lo ya guardado
         $enviaScops = $request->has('scops') || $request->has('nroScop');
         $scops = $enviaScops
@@ -677,7 +699,7 @@ class DespatchController extends Controller
 
             // Actualizar detalles del despatch
             DespatchProducto::where('id_despatch', $despatch->id)->delete();
-            foreach ($request->details as $detalles) {
+            foreach ($request->details ?? [] as $detalles) {
                 DespatchProducto::create([
                     'id_despatch' => $despatch->id,
                     'id_producto' => $detalles['id'] === 0 ? 1 : $detalles['id'],
@@ -691,7 +713,7 @@ class DespatchController extends Controller
 
             // Actualizar documentos adicionales
             Adicionales::where('id_despatch', $despatch->id)->delete();
-            foreach ($request->addDocs as $docs) {
+            foreach ($request->addDocs ?? [] as $docs) {
                 Adicionales::create([
                     'id_despatch' => $despatch->id,
                     'tipoDesc' => $docs['tipoDesc'],
@@ -722,7 +744,7 @@ class DespatchController extends Controller
 
             // Actualizar indicadores del envío
             ShipmentIndicadores::where('id_shipment', $shipment->id)->delete();
-            foreach ($envio['indicadores'] as $ind) {
+            foreach ($envio['indicadores'] ?? [] as $ind) {
                 $idIndicador = Indicadores::where('indicador', $ind)->first()->id;
                 ShipmentIndicadores::create([
                     'id_shipment' => $shipment->id,
@@ -763,7 +785,8 @@ class DespatchController extends Controller
                     'id_vehiculo' => $envio['vehiculo']['id'],
                     'tipo' => 'P',
                 ]);
-                foreach ($envio['vehiculo']['secundarios'] as $secu) {
+                // Un vehículo sin secundarios puede llegar con null
+                foreach ($envio['vehiculo']['secundarios'] ?? [] as $secu) {
                     ShipmentVehiculo::create([
                         'id_shipment' => $shipment->id,
                         'id_vehiculo' => $secu['id'],
@@ -774,7 +797,7 @@ class DespatchController extends Controller
 
             // Actualizar conductores
             ShipmentConductor::where('id_shipment', $shipment->id)->delete();
-            foreach ($envio['choferes'] as $chofer) {
+            foreach ($envio['choferes'] ?? [] as $chofer) {
                 ShipmentConductor::create([
                     'id_shipment' => $shipment->id,
                     'id_conductor' => $chofer['id'],
@@ -789,12 +812,18 @@ class DespatchController extends Controller
 
             DB::commit();
 
-            return response()->json([
+            $respuesta = [
                 'message' => "Guia electrónica con id {$shipment->id} actualizada con éxito",
                 'despatch' => $despatch,
                 'exito' => true,
                 'electronico' => $estadoelectronico->id,
-            ]);
+            ];
+
+            if ($request->boolean('enviar')) {
+                $respuesta['envio'] = $this->enviarAApi($despatch);
+            }
+
+            return response()->json($respuesta);
         } catch (QueryException $e) {
             DB::rollBack();
 
@@ -824,6 +853,180 @@ class DespatchController extends Controller
         }
     }
 
+
+    /**
+     * Enviar una guía guardada a SUNAT
+     *
+     * Para las guías que se guardaron como borrador ("guardar" sin enviar).
+     * La envía por la API de facturación según en qué punto esté:
+     * - nueva o rechazada: se envía con los datos actuales (una rechazada se
+     *   corrige antes con PUT y se reenvía con el mismo número);
+     * - con error de envío: se reintenta;
+     * - esperando respuesta de SUNAT: solo se consulta;
+     * - aceptada o dada de baja: 409.
+     *
+     * El resultado final llega después por webhook; mientras tanto
+     * `electronico.feEstado` es `pendingTicket`.
+     */
+    public function enviar($id, FacturacionApiService $service)
+    {
+        $despatch = Despatch::with('electronico')->find($id);
+
+        if ($error = $this->sinAcceso($despatch, $id)) {
+            return $error;
+        }
+
+        $resultado = $service->enviar($despatch);
+
+        return response()->json($this->resumenEnvio($resultado), $resultado['http']);
+    }
+
+    /**
+     * Consultar el estado de la guía en SUNAT
+     *
+     * Pregunta a la API de facturación (y, si sigue pendiente, consulta el
+     * ticket en SUNAT) y actualiza el estado electrónico. Útil si el webhook no
+     * llegó.
+     */
+    public function consultar($id, FacturacionApiService $service)
+    {
+        $despatch = Despatch::with('electronico')->find($id);
+
+        if ($error = $this->sinAcceso($despatch, $id)) {
+            return $error;
+        }
+
+        $resultado = $service->consultar($despatch);
+
+        return response()->json($this->resumenEnvio($resultado), $resultado['http']);
+    }
+
+    /**
+     * Descargar PDF, XML o CDR de la guía
+     *
+     * Lo obtiene de la API de facturación. `tipo`: `pdf` (defecto), `xml` o
+     * `cdr`. `formato` (solo pdf): `a4` (defecto) o `sunat`, el PDF que
+     * entrega SUNAT en el enlace del QR. Si la API no lo tiene (en beta su
+     * enlace no es de SUNAT), se baja directo del enlace guardado en la guía;
+     * 404/503 si aún no hay. Con `descargar=1` se descarga en vez de abrirse.
+     */
+    public function archivo(Request $request, $id, FacturacionApiService $service)
+    {
+        $request->validate([
+            'tipo' => 'sometimes|in:pdf,xml,cdr',
+            'formato' => 'sometimes|in:a4,sunat',
+        ]);
+
+        $despatch = Despatch::with('electronico')->find($id);
+
+        if ($error = $this->sinAcceso($despatch, $id)) {
+            return $error;
+        }
+
+        $estado = $despatch->electronico;
+
+        if (! $estado || ! $estado->fe_id) {
+            return response()->json(['error' => 'La guía no se ha enviado por la API de facturación.', 'exito' => false], 409);
+        }
+
+        if ($falta = $service->faltaConfigurar()) {
+            return response()->json(['error' => $falta, 'exito' => false], 503);
+        }
+
+        $tipo = $request->input('tipo', 'pdf');
+        $sunat = $tipo === 'pdf' && $request->input('formato') === 'sunat';
+        $extension = ['pdf' => 'pdf', 'xml' => 'xml', 'cdr' => 'zip'][$tipo];
+        $nombre = ($sunat ? 'SUNAT-' : '') . "{$despatch->serie}-{$despatch->correlativo}.{$extension}";
+        $disposicion = $request->boolean('descargar') ? 'attachment' : 'inline';
+
+        try {
+            $respuesta = $service->archivo($estado, $tipo, $sunat ? 'sunat' : 'a4');
+        } catch (ConnectionException $e) {
+            $respuesta = null;
+        }
+
+        // PDF de SUNAT: si la API no lo tiene (404, p. ej. en beta) o no responde,
+        // directo del enlace del QR. Con 503 no: la API ya intentó con SUNAT y
+        // no lo entregó, volver a pedirlo solo duplica la espera.
+        $apiSinPdf = ! $respuesta || $respuesta->status() === 404;
+        if ($sunat && $apiSinPdf && ($pdf = $service->pdfSunatDirecto($estado))) {
+            return response($pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "$disposicion; filename=\"$nombre\"",
+            ]);
+        }
+
+        if (! $respuesta) {
+            return response()->json(['error' => 'No se pudo contactar a la API de facturación.', 'exito' => false], 502);
+        }
+
+        if (! $respuesta->successful()) {
+            // 404 = aún no hay archivo (p. ej. PDF de SUNAT antes de aceptarse); 503 = SUNAT no responde
+            $http = in_array($respuesta->status(), [404, 503], true) ? $respuesta->status() : 502;
+
+            return response()->json([
+                'error' => $respuesta->json('message') ?? $respuesta->json('error') ?? "La API respondió {$respuesta->status()}",
+                'urlQr' => $estado->fe_qr_url,
+                'exito' => false,
+            ], $http, array_filter(['Retry-After' => $respuesta->header('Retry-After')]));
+        }
+
+        return response($respuesta->body(), 200, [
+            'Content-Type' => $respuesta->header('Content-Type') ?: 'application/octet-stream',
+            'Content-Disposition' => "$disposicion; filename=\"$nombre\"",
+        ]);
+    }
+
+    /**
+     * Envía la guía recién guardada y resume el resultado para el front.
+     * Un fallo aquí no deshace el guardado: la guía queda como borrador.
+     */
+    private function enviarAApi(Despatch $despatch)
+    {
+        $despatch->load('electronico');
+
+        return $this->resumenEnvio(app(FacturacionApiService::class)->enviar($despatch));
+    }
+
+    private function resumenEnvio(array $resultado)
+    {
+        $estado = $resultado['estado'];
+
+        return [
+            'exito' => $resultado['exito'],
+            'message' => $resultado['message'],
+            'errors' => $resultado['errors'],
+            'electronico' => $estado ? [
+                'id' => $estado->id,
+                'estado' => $estado->estado,
+                'estadoSunat' => $estado->estadoSunat,
+                'codigoSunat' => $estado->codigoSunat,
+                'descripcion' => $estado->descripcion,
+                'feId' => $estado->fe_id,
+                'feEstado' => $estado->fe_estado,
+                'feQrUrl' => $estado->fe_qr_url,
+                'ticket' => $estado->ticket,
+            ] : null,
+        ];
+    }
+
+    /**
+     * Misma regla que show(): el admin ve todo, el resto solo sus guías.
+     */
+    private function sinAcceso($despatch, $id)
+    {
+        if (! $despatch) {
+            return response()->json(['error' => "No existe la guía con id $id", 'exito' => false], 404);
+        }
+
+        $user = Auth::user();
+
+        if ($user->perfil !== 'admin' && $user->id !== $despatch->id_user) {
+            return response()->json(['error' => 'Este usuario no tiene permisos sobre la guía', 'exito' => false], 403);
+        }
+
+        return null;
+    }
 
     /**
      * Remove the specified resource from storage.

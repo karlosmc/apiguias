@@ -25,7 +25,8 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // El front lee el nombre del archivo en GET /api/despatches/{id}/archivo
+    'exposed_headers' => ['Content-Disposition'],
 
     'max_age' => 0,
 
