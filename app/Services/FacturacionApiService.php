@@ -585,24 +585,29 @@ class FacturacionApiService
         }
 
         $codLocal = trim((string) $ubicacion->codLocal);
-        $rucPunto = trim((string) $ubicacion->ruc);
+        $rucPunto = preg_replace('/\D/', '', (string) $ubicacion->ruc);
 
-        // La API no recibe el RUC del punto: todo código que se le mande lo toma
-        // como un establecimiento anexo DEL EMISOR. El de un punto de otro RUC
-        // (la partida de una compra, que es del proveedor) no se envía: sólo su
-        // dirección y ubigeo, si no SUNAT lo registra como local de la empresa.
-        $esDelEmisor = $rucPunto === '' || $rucPunto === (string) $this->ruc();
+        // El código de establecimiento anexo va con el RUC de su DUEÑO
+        // (AddressTypeCode listID="ruc"). Se manda siempre explícito: si se
+        // omite, la API asume el del emisor en la partida y el del destinatario
+        // en la llegada, y eso falla p. ej. en una compra (02), cuya partida es
+        // el almacén del proveedor. Punto sin RUC = de la empresa (emisor).
+        $rucDueno = $rucPunto === '' ? (string) $this->ruc() : $rucPunto;
 
         // 0000 (domicilio fiscal) es el valor por defecto de la columna: solo
         // se envía cuando importa, en el traslado entre establecimientos (04).
-        $enviarCodigo = $esDelEmisor
-            && strlen($codLocal) === 4
-            && ($codLocal !== '0000' || $motivo === '04');
+        // Sin un RUC de 11 dígitos (p. ej. un DNI) no hay dueño que declarar.
+        $enviarCodigo = strlen($codLocal) === 4
+            && ($codLocal !== '0000' || $motivo === '04')
+            && strlen($rucDueno) === 11;
 
+        // La API solo acepta `ruc` junto con codigoEstablecimiento: sin código
+        // no se manda ninguno de los dos (limpiar() quita los null).
         return [
             'ubigeo' => trim((string) $ubicacion->ubigeo),
             'direccion' => $this->texto($ubicacion->direccion, 500),
             'codigoEstablecimiento' => $enviarCodigo ? $codLocal : null,
+            'ruc' => $enviarCodigo ? $rucDueno : null,
         ];
     }
 

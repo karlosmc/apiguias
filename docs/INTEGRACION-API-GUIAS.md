@@ -128,7 +128,7 @@ Hay una implementación de referencia en `G:\fullprojects\topsoft\backend-erp-to
 | `envio.fechaTraslado` | `shipments.fecTraslado` |
 | `envio.fechaEntregaTransportista` | `shipments.fecInicioTrasladoBienes` (solo modalidad 01) |
 | `envio.pesoTotal`, `unidadPeso`, `numeroBultos`, `indicadorTransbordo`, `sustentoPeso` | `shipments.pesoTotal`, `undPesoTotal`, `numBultos`, `indTransbordo`, `sustentoPeso` |
-| `envio.partida` / `envio.llegada` `{ubigeo, direccion, codigoEstablecimiento}` | `shipment_puntoubicacions` con tipo P / L (`codLocal`) |
+| `envio.partida` / `envio.llegada` `{ubigeo, direccion, codigoEstablecimiento, ruc}` | `shipment_puntoubicacions` con tipo P / L (`codLocal`, `ruc`). El código va siempre con el `ruc` de su dueño: el del punto, o el del emisor si el punto no tiene RUC. Así una partida en el almacén del proveedor (compra, 02) sale con el RUC del proveedor. `0000` solo se manda en el motivo 04. Sin código, o si el punto tiene un DNI, no se envían ni código ni `ruc` |
 | `envio.transportista{numeroDocumento, razonSocial, registroMtc}` | `transportistas` (`numDoc`, `rznSocial`, `nroMtc`) |
 | `envio.vehiculos[]{placa, numeroCirculacion, numeroAutorizacion, entidadAutorizadora}` | `vehiculos` vía `shipment_vehiculo`, el principal (P) primero. `numeroAutorizacion` y `entidadAutorizadora` (`nroAutorizacion` / `codEmisor`) solo en transporte público (01) y si están los dos; en privado (02) no se envían |
 | `envio.conductores[]{tipoDocumento, numeroDocumento, nombres, apellidos, licencia}` | `conductores` vía `shipment_conductor`, el principal (P) primero |

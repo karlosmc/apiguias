@@ -245,15 +245,15 @@ Ambos devuelven `estado: pendingTicket` y luego cambian solos a `accepted`/`reje
 | `envio.pesoNeto` | No | → `NetWeightMeasure`, misma unidad |
 | `envio.sustentoPeso` | No | máx. 250, → `Shipment/Information` (sustento de la diferencia de peso, p. ej. importación) |
 | `envio.numeroBultos`, `envio.indicadorTransbordo` | No | |
-| `envio.partida{ubigeo 6 dígitos, direccion, codigoEstablecimiento? 4 caracteres}` | Sí | |
-| `envio.llegada{…}` | Sí | mismo formato |
+| `envio.partida{ubigeo 6 dígitos, direccion, codigoEstablecimiento? 4 caracteres, ruc? 11 dígitos}` | Sí | `codigoEstablecimiento` + `ruc` → `AddressTypeCode listID="ruc"` (establecimiento anexo SUNAT). `ruc` = dueño del establecimiento; si se omite se usa el RUC del **emisor**. Envíelo cuando la partida es de un tercero (p. ej. compra, motivo 02: almacén del proveedor). Solo se acepta junto con `codigoEstablecimiento` |
+| `envio.llegada{…}` | Sí | mismo formato; si se omite `ruc` se usa el documento del **destinatario** (en traslado entre establecimientos, motivo 04, envíe el RUC del emisor si el destinatario no lo es) |
 | `envio.transportista{numeroDocumento RUC, razonSocial, registroMtc?}` | Si es 09 con modalidad 01 | |
 | `envio.vehiculos[]{placa, numeroCirculacion?, numeroAutorizacion?, entidadAutorizadora? (2, cat. D-37)}` (máx. 3) | Si es privado o 31 | placa 6–8 caracteres; el primero es el principal, los demás secundarios. `numeroCirculacion` = TUCE o certificado de habilitación |
 | `envio.conductores[]{tipoDocumento, numeroDocumento, nombres, apellidos, licencia 9–10}` (máx. 3) | Si es privado o 31 | el primero es el principal |
 | Público (01) con vehículo/conductor | No | Opcionales, pero si manda uno debe mandar ambos; la API agrega `SUNAT_Envio_IndicadorVehiculoConductoresTransp` |
 | `envio.contenedores[]` (máx. 2) | No | números de contenedor (importación/exportación) |
 | `envio.puerto{codigo, nombre}` o `envio.aeropuerto{codigo, nombre}` | No | cat. 63 / 64 → `FirstArrivalPortLocation` |
-| `envio.vehiculoMenor` (bool) | No | Solo guía 09. `true` = traslado en vehículo M1/L: vehículo y conductor pasan a ser opcionales, pero si envía uno debe enviar ambos. Agrega `SUNAT_Envio_IndicadorTrasladoVehiculoM1L` al XML |
+| `envio.vehiculoMenor` (bool) | No | Solo guía 09. `true` = traslado en vehículo M1/L: vehículo y conductor pasan a ser opcionales: puede enviar solo el vehículo; si envía conductor debe enviar también el vehículo. Agrega `SUNAT_Envio_IndicadorTrasladoVehiculoM1L` al XML |
 | `items[]{descripcion, cantidad, unidadMedida?, codigo?, codigoSunat?, atributos?[]{nombre, codigo, valor?}}` | Sí | `atributos` → `AdditionalItemProperty` (p. ej. partida arancelaria, código 7020) |
 
 ---
