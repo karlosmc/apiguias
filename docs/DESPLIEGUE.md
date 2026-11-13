@@ -1,5 +1,7 @@
 # Despliegue en el VPS (varias empresas)
 
+> Checklist paso a paso: [PASOS-VPS.md](PASOS-VPS.md).
+
 El código está pensado para **una empresa por base de datos** (`Empresa::first()`, `sunat_parameters`). Para varias empresas se usa el mismo repositorio con una instalación por empresa:
 
 ```

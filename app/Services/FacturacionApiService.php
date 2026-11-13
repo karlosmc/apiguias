@@ -286,6 +286,8 @@ class FacturacionApiService
                 'vehiculos' => $envio->vehiculos
                     ->sortBy(fn ($v) => $v->pivot->tipo === 'P' ? 0 : 1)
                     ->map(fn ($v) => $this->vehiculo($v, $publico))
+                    // La misma placa como principal y secundaria: va una sola vez
+                    ->unique('placa')
                     ->values()->all(),
                 'conductores' => $envio->conductores
                     ->sortBy(fn ($c) => $c->pivot->tipo === 'P' ? 0 : 1)
@@ -583,10 +585,19 @@ class FacturacionApiService
         }
 
         $codLocal = trim((string) $ubicacion->codLocal);
+        $rucPunto = trim((string) $ubicacion->ruc);
+
+        // La API no recibe el RUC del punto: todo código que se le mande lo toma
+        // como un establecimiento anexo DEL EMISOR. El de un punto de otro RUC
+        // (la partida de una compra, que es del proveedor) no se envía: sólo su
+        // dirección y ubigeo, si no SUNAT lo registra como local de la empresa.
+        $esDelEmisor = $rucPunto === '' || $rucPunto === (string) $this->ruc();
 
         // 0000 (domicilio fiscal) es el valor por defecto de la columna: solo
         // se envía cuando importa, en el traslado entre establecimientos (04).
-        $enviarCodigo = strlen($codLocal) === 4 && ($codLocal !== '0000' || $motivo === '04');
+        $enviarCodigo = $esDelEmisor
+            && strlen($codLocal) === 4
+            && ($codLocal !== '0000' || $motivo === '04');
 
         return [
             'ubigeo' => trim((string) $ubicacion->ubigeo),
