@@ -30,7 +30,8 @@ bash scripts/restaurar-configuracion.sh <archivo> [--forzar]
   - Resources en `app/Http/Resources`. Algunos nombres tienen errata: `ClienteResouce`, `PuntoubicacionResouce`.
   - FormRequests en `app/Http/Requests`, aunque muchos controladores validan en línea.
   - Servicios en `app/Services`.
-- **Rutas**: todas en `routes/api.php`, bajo `auth:sanctum`, salvo `login`, `registro`, `convert` y `factiliza/*`. El grupo `admin` usa el middleware `app/Http/Middleware/EsAdmin.php` (`users.perfil === 'admin'`).
+- **Rutas**: todas en `routes/api.php`, bajo `auth:sanctum` + `abilities:web`, salvo `login`, `registro`, `convert`, `factiliza/*`, `webhooks/facturacion` (firma HMAC), `scop-temporal/*` (`X-Api-Key` si hay `SCOP_TEMPORAL_KEY`, o token móvil) y `movil/*` (app Android). El grupo `admin` usa el middleware `app/Http/Middleware/EsAdmin.php` (`users.perfil === 'admin'`).
+- **Tokens**: el login web crea tokens con `*`. El de la app Android (`POST /api/movil/login`) solo tiene la ability `movil`, así que no entra al grupo web. No quites `abilities:web` del grupo principal. La app de guías obtiene su token `movil` sin contraseña con `POST /api/movil/vincular` (pide el token web).
 - **Línea de código**: el repo usa LF; Git avisa de la conversión a CRLF en Windows.
 
 ## Dominio (resumen)
@@ -40,6 +41,9 @@ bash scripts/restaurar-configuracion.sh <archivo> [--forzar]
   - `shipment_puntoubicacions`, con `tipo` P = partida o L = llegada.
   - `shipment_indicadores`.
   - `DespatchProducto` (ítems), `Adicionales` (documentos relacionados) y `Scop` (números SCOP; un número no puede repetirse en dos guías).
+- **`ScopTemporal`** (`scop_temporal`): SCOP que carga otra app o la app móvil. **Un SCOP, un registro**: `nroScop` es único y `POST /api/scop-temporal` inserta o actualiza (solo los campos que cambiaron; un vacío nunca borra un dato), con `POST /api/scop-temporal/verificar` como vista previa que no guarda. La lógica está en `app/Services/ScopTemporalSincronizacion.php`. `lote` = la carga en que entró cada SCOP (no cambia al actualizar); `DELETE /api/scop-temporal/lotes/{lote}` borra esa carga. La placa se guarda normalizada (`ABC123`). No es la tabla `scop` (SCOP usados en guías). Al hacer la guía, el front los lista por placa con `GET /api/scop/temporales?placa=` (`ScopController::temporales`; los ya usados salen con `disponible: false` y su guía). En líquidos agrega `id_puntoubicacion` = punto de llegada: la app envía `idEstablecimiento` por SCOP (columna `id_puntoubicacion`) y salen los de ese punto más los que no lo traen; el SCOP elegido se bloquea recién al guardar la guía (`scops` → tabla `scop`, 409 si otra lo tomó).
+- **Credenciales PVO** (Osinergmin): `CredencialPvo` (`credenciales_pvo`, usuario y clave con cast `encrypted`), una por establecimiento propio (`isCompany`) o placa propia **de GLP** (`isCompany` + `glp`; filtro en `CredencialPvo::validos`). Se entregan a la app Android cifradas con la llave del celular (`DispositivoMovil`, `CifradoDispositivo`) y cada entrega queda en `credenciales_pvo_accesos`. Acceso por `users.accesoMovil`, activo por defecto (el admin lo quita). Contrato en [docs/API-MOVIL.md](docs/API-MOVIL.md).
+- **App móvil de guías** (React Native, aparte): Guía rápida + Consulta de guías con las rutas web existentes y SCOP por portal (`POST /api/scop/consulta`, no `scop_temporal`). Contrato en [docs/CONTRATO-APP-GUIAS-MOVIL.md](docs/CONTRATO-APP-GUIAS-MOVIL.md).
 - **`EstadoElectronico`**: una fila por guía, con estado `P` pendiente, `F` final (ya no editable) o `B` baja. También guarda ticket, hash, hashQr, rutas XML/PDF/CDR y la respuesta de SUNAT.
 - **Serie y correlativo**:
   - `Numeracion` pertenece a `PuntoEmision`, y los usuarios se asignan por `users_puntoemision`.

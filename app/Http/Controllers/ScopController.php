@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ScopResource;
 use App\Models\Scop;
+use App\Models\ScopTemporal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -171,6 +172,104 @@ class ScopController extends Controller
         return response()->json([
             'message' => "El número de SCOP $numero quedó libre",
             'exito' => true,
+        ]);
+    }
+
+    /**
+     * SCOP temporales de una placa (para elegirlos al hacer la guía)
+     *
+     * Lista lo cargado en scop_temporal para la placa, del más reciente al más
+     * antiguo (fecha de despacho, si no la de pedido, si no la de carga). Los
+     * que ya están en otra guía (tabla `scop`) también salen, con
+     * `disponible: false` y la guía que los tiene, para mostrarlos
+     * deshabilitados.
+     *
+     * - `placa` (obligatoria): se compara normalizada (`abc-123` = `ABC123`).
+     * - `id_despatch` (opcional): la guía en edición; sus propios SCOP salen
+     *   disponibles y con `enEstaGuia: true`.
+     * - `id_puntoubicacion` (opcional): punto de llegada de la guía. Para
+     *   líquidos: deja los SCOP de ese establecimiento y los que no traen
+     *   establecimiento (cargados sin el dato). En GLP no se envía.
+     * - `desde` / `hasta` (opcionales, YYYY-MM-DD): filtran por esa misma fecha.
+     *
+     * Elegir aquí no reserva nada: el SCOP se bloquea al guardar la guía
+     * (`scops` en POST/PUT /api/despatches), que responde 409 si otra guía lo
+     * tomó entre tanto.
+     *
+     * @response array{exito: bool, placa: string, total: int, disponibles: int, scops: array<int, array{nroScop: string, factura: string|null, proveedor: string|null, fechaPedido: string|null, fechaVenta: string|null, fechaDespacho: string|null, estadoPedido: string|null, producto: string|null, placa: string, idEstablecimiento: int|null, volumen: float|null, unidadMedida: string|null, disponible: bool, enEstaGuia: bool, id_despatch: int|null, guia: string|null}>}
+     */
+    public function temporales(Request $request)
+    {
+        $request->validate([
+            'placa' => 'required|string|max:20',
+            'id_despatch' => 'sometimes|nullable|integer',
+            'id_puntoubicacion' => 'sometimes|nullable|integer',
+            'desde' => 'sometimes|nullable|date_format:Y-m-d',
+            'hasta' => 'sometimes|nullable|date_format:Y-m-d',
+        ]);
+
+        $placa = ScopTemporal::normalizarPlaca($request->input('placa'));
+
+        if ($placa === '') {
+            throw ValidationException::withMessages(['placa' => 'La placa no es válida']);
+        }
+
+        $fecha = 'COALESCE(fechaDespacho, fechaPedido, created_at)';
+        $query = ScopTemporal::where('placa', $placa);
+
+        if ($request->filled('id_puntoubicacion')) {
+            $idPunto = (int) $request->input('id_puntoubicacion');
+            $query->where(fn ($q) => $q->where('id_puntoubicacion', $idPunto)->orWhereNull('id_puntoubicacion'));
+        }
+
+        if ($request->filled('desde')) {
+            $query->whereRaw("$fecha >= ?", [$request->input('desde') . ' 00:00:00']);
+        }
+        if ($request->filled('hasta')) {
+            $query->whereRaw("$fecha <= ?", [$request->input('hasta') . ' 23:59:59']);
+        }
+
+        $filas = $query->orderByRaw("$fecha DESC")->orderByDesc('id')->get();
+
+        $numeros = $filas->pluck('nroScop')->map(fn ($n) => (string) $n)->all();
+        $idDespatch = $request->input('id_despatch');
+        $ocupados = Scop::ocupados($numeros, $idDespatch)->keyBy(fn ($s) => (string) $s->nroScop);
+        $deEstaGuia = $idDespatch
+            ? Scop::where('id_despatch', $idDespatch)->whereIn('nroScop', $numeros)->pluck('nroScop')->map(fn ($n) => (string) $n)->flip()
+            : collect();
+
+        $fechaTexto = fn ($valor) => $valor ? $valor->format('Y-m-d H:i:s') : null;
+
+        $scops = $filas->map(function ($f) use ($ocupados, $deEstaGuia, $fechaTexto) {
+            $nro = (string) $f->nroScop;
+            $uso = $ocupados->get($nro);
+
+            return [
+                'nroScop' => $nro,
+                'factura' => $f->factura,
+                'proveedor' => $f->proveedor,
+                'fechaPedido' => $fechaTexto($f->fechaPedido),
+                'fechaVenta' => $fechaTexto($f->fechaVenta),
+                'fechaDespacho' => $fechaTexto($f->fechaDespacho),
+                'estadoPedido' => $f->estadoPedido,
+                'producto' => $f->producto,
+                'placa' => $f->placa,
+                'idEstablecimiento' => $f->id_puntoubicacion,
+                'volumen' => $f->volumen,
+                'unidadMedida' => $f->unidadMedida,
+                'disponible' => $uso === null,
+                'enEstaGuia' => $deEstaGuia->has($nro),
+                'id_despatch' => $uso?->id_despatch,
+                'guia' => $uso && $uso->despatch ? $uso->despatch->serie . '-' . $uso->despatch->correlativo : null,
+            ];
+        })->values();
+
+        return response()->json([
+            'exito' => true,
+            'placa' => $placa,
+            'total' => $scops->count(),
+            'disponibles' => $scops->where('disponible', true)->count(),
+            'scops' => $scops,
         ]);
     }
 

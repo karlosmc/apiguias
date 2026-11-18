@@ -30,6 +30,7 @@ TABLAS_CONFIGURACION=(
   tipo_documentos motivo_traslado modalidad_traslado indicadores ubigeos puerto
   puntoubicacion almacen_fafio clientes transportistas conductores vehiculos
   productos productos_fafio favoritos
+  credenciales_pvo
 )
 
 # Las que se dejan vacías a propósito (solo para avisar de tablas nuevas que
@@ -37,7 +38,7 @@ TABLAS_CONFIGURACION=(
 TABLAS_SIN_DATOS=(
   despatches despatch_productos adicionales estado_electronico scop
   shipments shipment_vehiculo shipment_conductor shipment_puntoubicacions shipment_indicadores
-  personal_access_tokens password_resets failed_jobs token_sunat
+  scop_temporal dispositivos_moviles credenciales_pvo_accesos personal_access_tokens password_resets failed_jobs token_sunat
 )
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -45,6 +45,22 @@ return [
         'log_lento' => env('API_SCOP_LOG_LENTO', 5),
     ],
 
+    // Carga de SCOP temporales desde otra app (ScopTemporalController, sin login).
+    // Con key definida se exige la cabecera X-Api-Key; vacía = abierto.
+    'scop_temporal' => [
+        'key' => env('SCOP_TEMPORAL_KEY'),
+        'max_registros' => env('SCOP_TEMPORAL_MAX_REGISTROS', 2000),
+    ],
+
+    // App Android (MovilController): login, maestros y credenciales PVO.
+    // Ver docs/API-MOVIL.md
+    'movil' => [
+        // false solo en pruebas: la contraseña y el token viajarían en claro
+        'exigir_https' => env('MOVIL_EXIGIR_HTTPS', true),
+        // Vida del token móvil; la expiración global de Sanctum (720 min) también aplica
+        'token_horas' => env('MOVIL_TOKEN_HORAS', 12),
+    ],
+
     // API de facturación propia (FacturacionApi): emite las guías a SUNAT.
     // Ver docs/INTEGRACION-API-GUIAS.md
     'facturacion' => [

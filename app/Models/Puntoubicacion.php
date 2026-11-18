@@ -27,6 +27,12 @@ class Puntoubicacion extends Model
     public function despatches(){
         return $this->belongsToMany(Shipment::class, 'shipment_puntoubicacions', 'id_puntoubicacion', 'id_shipment');
     }
+    /** Usuario y clave del PVO de Osinergmin (solo establecimientos propios). */
+    public function credencialPvo()
+    {
+        return $this->hasOne(CredencialPvo::class, 'id_puntoubicacion');
+    }
+
     public function almacenesFafio()
     {
         return $this->hasMany(AlmacenFafio::class, 'id_punto_ubicacion');

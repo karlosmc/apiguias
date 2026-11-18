@@ -28,6 +28,12 @@ class Vehiculo extends Model
     ];
 
 
+    /** Usuario y clave del PVO de Osinergmin (solo placas propias). */
+    public function credencialPvo()
+    {
+        return $this->hasOne(CredencialPvo::class, 'id_vehiculo');
+    }
+
     public function shipments(){
 
         return $this->belongsToMany(Shipment::class, 'shipment_vehiculo', 'id_vehiculo', 'id_shipment');

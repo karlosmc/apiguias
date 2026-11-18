@@ -6,17 +6,20 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConductorController;
 use App\Http\Controllers\ConfiguracionFacturacionController;
 use App\Http\Controllers\ConsultaScopApiController;
+use App\Http\Controllers\CredencialPvoController;
 use App\Http\Controllers\DespatchController;
 
 use App\Http\Controllers\EstadoElectronicoController;
 use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\FactilizaCommonController;
 use App\Http\Controllers\MigracionGuiasController;
+use App\Http\Controllers\MovilController;
 use App\Http\Controllers\NumeracionController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\PuntoEmisionController;
 use App\Http\Controllers\PuntoUbicacionController;
 use App\Http\Controllers\ScopController;
+use App\Http\Controllers\ScopTemporalController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\SunatParameterController;
 use App\Http\Controllers\TokenSunatController;
@@ -45,7 +48,9 @@ use Illuminate\Support\Facades\Route;
 // });
 
 
-Route::middleware('auth:sanctum')->group(function(){
+// `abilities:web`: el token de la app móvil (ability `movil`) no entra aquí.
+// Los del login normal tienen `*` y pasan.
+Route::middleware(['auth:sanctum', 'abilities:web'])->group(function(){
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -87,12 +92,23 @@ Route::middleware('auth:sanctum')->group(function(){
     // Consulta al API externo de SCOP: gasta la API key de la empresa, solo con sesión
     Route::post('/scop/consulta', [ConsultaScopApiController::class, 'getData']);
     Route::get('/scop/disponible', [ScopController::class, 'disponible']);
+    // SCOP cargados en scop_temporal para una placa (para elegirlos al hacer la guía)
+    Route::get('/scop/temporales', [ScopController::class, 'temporales']);
     Route::apiResource('/scop', ScopController::class);
 
     // Solo perfil admin: ver los favoritos de otro usuario y clonarlos a otro
     Route::middleware('admin')->group(function () {
         Route::get('/favoritos/usuario/{id}', [FavoritoController::class, 'deUsuario']);
         Route::post('/favoritos/clonar', [FavoritoController::class, 'clonar']);
+
+        // Credenciales PVO de Osinergmin y acceso a la app móvil
+        Route::get('/admin/credenciales-pvo', [CredencialPvoController::class, 'index']);
+        Route::get('/admin/credenciales-pvo/accesos', [CredencialPvoController::class, 'accesos']);
+        Route::put('/admin/credenciales-pvo/{tipo}/{id}', [CredencialPvoController::class, 'guardar'])->whereIn('tipo', ['establecimiento', 'vehiculo']);
+        Route::delete('/admin/credenciales-pvo/{tipo}/{id}', [CredencialPvoController::class, 'eliminar'])->whereIn('tipo', ['establecimiento', 'vehiculo']);
+        Route::get('/admin/dispositivos', [CredencialPvoController::class, 'dispositivos']);
+        Route::delete('/admin/dispositivos/{dispositivo}', [CredencialPvoController::class, 'revocarDispositivo']);
+        Route::patch('/admin/usuarios/{user}/acceso-movil', [CredencialPvoController::class, 'accesoMovil']);
 
         // Conexión con la API de facturación (URL, token y secreto del webhook)
         Route::get('/empresa/facturacion', [ConfiguracionFacturacionController::class, 'show']);
@@ -136,6 +152,32 @@ Route::post('/login',[AuthController::class,'login']);
 // FE_WEBHOOK_SECRET), y el throttle evita que se abuse de la URL pública.
 Route::post('/webhooks/facturacion', [WebhookFacturacionController::class, 'facturacion'])
     ->middleware('throttle:120,1');
+
+// App Android: el login es público (throttle por IP); lo demás pide el token
+// `movil`. movil.https rechaza HTTP salvo MOVIL_EXIGIR_HTTPS=false (pruebas).
+Route::prefix('movil')->middleware('movil.https')->group(function () {
+    Route::post('/login', [MovilController::class, 'login'])->middleware('throttle:5,1');
+    // La app de guías (ya con sesión web) registra el celular sin volver a pedir la contraseña.
+    // Sin throttle propio: basta el `throttle:api` del grupo (un throttle:N,1 sin nombre
+    // comparte el contador del usuario con /credenciales).
+    Route::post('/vincular', [MovilController::class, 'vincular'])->middleware(['auth:sanctum', 'abilities:web']);
+
+    Route::middleware(['auth:sanctum', 'abilities:movil'])->group(function () {
+        Route::get('/maestros', [MovilController::class, 'maestros']);
+        Route::post('/credenciales', [MovilController::class, 'credencial'])->middleware('throttle:20,1');
+        Route::post('/logout', [MovilController::class, 'logout']);
+    });
+});
+
+// SCOP temporales: los carga otra aplicación, por eso sin login. Si
+// SCOP_TEMPORAL_KEY está en el .env piden la cabecera X-Api-Key o el token
+// de la app móvil.
+Route::prefix('scop-temporal')->middleware('throttle:60,1')->group(function () {
+    Route::post('/verificar', [ScopTemporalController::class, 'verificar']);
+    Route::post('/', [ScopTemporalController::class, 'store']);
+    Route::get('/lotes', [ScopTemporalController::class, 'lotes']);
+    Route::delete('/lotes/{lote}', [ScopTemporalController::class, 'destroyLote']);
+});
 
 
 
