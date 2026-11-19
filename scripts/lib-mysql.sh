@@ -1,7 +1,29 @@
 #!/usr/bin/env bash
 #
-# Funciones comunes de backup-configuracion.sh y restaurar-configuracion.sh.
-# No se ejecuta sola.
+# Funciones comunes de backup-configuracion.sh, restaurar-configuracion.sh y
+# vaciar-guias.sh. No se ejecuta sola.
+
+# Tablas de configuración: el backup las copia CON datos y vaciar-guias.sh no las toca.
+TABLAS_CONFIGURACION=(
+  migrations
+  empresa sunat_parameters
+  users users_puntoemision puntos_emision numeracion numeracion_vehiculos
+  tipo_documentos motivo_traslado modalidad_traslado indicadores ubigeos puerto
+  puntoubicacion almacen_fafio clientes transportistas conductores vehiculos
+  productos productos_fafio favoritos
+  credenciales_pvo
+)
+
+# Tablas de movimiento (guías, envíos, estado electrónico, SCOP, sesiones, token
+# SUNAT en caché): el backup copia solo su estructura y vaciar-guias.sh las vacía.
+# Una tabla nueva va en una de las dos listas; si no, los scripts avisan.
+TABLAS_SIN_DATOS=(
+  despatches despatch_productos adicionales estado_electronico scop
+  shipments shipment_vehiculo shipment_conductor shipment_puntoubicacions shipment_indicadores
+  scop_temporal dispositivos_moviles credenciales_pvo_accesos personal_access_tokens password_resets failed_jobs token_sunat
+)
+
+contiene() { local x="$1"; shift; for e in "$@"; do [ "$e" = "$x" ] && return 0; done; return 1; }
 
 fallar() { echo "ERROR: $*" >&2; exit 1; }
 aviso()  { echo "AVISO: $*" >&2; }

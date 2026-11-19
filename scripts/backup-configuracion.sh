@@ -21,25 +21,8 @@
 
 set -euo pipefail
 
-# Tablas que se copian CON datos. Las demás (guías, envíos, estado
-# electrónico, SCOP, sesiones, token SUNAT en caché) solo con su estructura.
-TABLAS_CONFIGURACION=(
-  migrations
-  empresa sunat_parameters
-  users users_puntoemision puntos_emision numeracion numeracion_vehiculos
-  tipo_documentos motivo_traslado modalidad_traslado indicadores ubigeos puerto
-  puntoubicacion almacen_fafio clientes transportistas conductores vehiculos
-  productos productos_fafio favoritos
-  credenciales_pvo
-)
-
-# Las que se dejan vacías a propósito (solo para avisar de tablas nuevas que
-# no estén en ninguna de las dos listas).
-TABLAS_SIN_DATOS=(
-  despatches despatch_productos adicionales estado_electronico scop
-  shipments shipment_vehiculo shipment_conductor shipment_puntoubicacions shipment_indicadores
-  scop_temporal dispositivos_moviles credenciales_pvo_accesos personal_access_tokens password_resets failed_jobs token_sunat
-)
+# Las listas TABLAS_CONFIGURACION y TABLAS_SIN_DATOS están en scripts/lib-mysql.sh
+# (las comparte con vaciar-guias.sh).
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/lib-mysql.sh
@@ -53,7 +36,6 @@ command -v mysqldump >/dev/null || fallar "No se encontró mysqldump (instala el
 mapfile -t EXISTENTES < <(mysql_cmd -N -B -e 'SHOW TABLES' "$DB" | tr -d '\r')
 [ "${#EXISTENTES[@]}" -gt 0 ] || fallar "La base '$DB' no tiene tablas."
 
-contiene() { local x="$1"; shift; for e in "$@"; do [ "$e" = "$x" ] && return 0; done; return 1; }
 
 CON_DATOS=()
 for t in "${TABLAS_CONFIGURACION[@]}"; do
