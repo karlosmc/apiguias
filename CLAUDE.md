@@ -19,6 +19,7 @@ php artisan docs:openapi                         # exporta openapi.json (Scrambl
 bash scripts/backup-configuracion.sh [destino]   # backup de configuración sin guías (lee el .env)
 bash scripts/restaurar-configuracion.sh <archivo> [--forzar]
 bash scripts/vaciar-guias.sh [--si]              # backup completo + vacía guías/movimiento (TABLAS_SIN_DATOS en lib-mysql.sh)
+bash scripts/ejecutar-sql.sh <archivo.sql> [--si] # backup completo + ejecuta el .sql (ej.: scripts/sql/correlativos.ejemplo.sql)
 ```
 - Despliegue: una instalación (clone + `.env` + BD) por empresa. Ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md) y el checklist [docs/PASOS-VPS.md](docs/PASOS-VPS.md).
 - Tests: solo los de ejemplo (`tests/`). `phpunit.xml` **no** usa sqlite en memoria: los tests usarían la BD real del `.env`.

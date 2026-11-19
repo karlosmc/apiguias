@@ -24,3 +24,6 @@ yarn-error.log
 /openapi.json
 .htaccess
 index.php
+# SQL reales de cada instalación (se versiona solo el ejemplo)
+/scripts/sql/*.sql
+!/scripts/sql/*.ejemplo.sql
